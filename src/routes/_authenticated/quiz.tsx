@@ -23,7 +23,7 @@ type Q = { question: string; options: string[]; correctIndex: number; explanatio
 function Quiz() {
   const gen = useServerFn(generateQuiz);
   const qc = useQueryClient();
-  const [topic, setTopic] = useState(TOPICS[0]);
+  const [topic, setTopic] = useState<string>(TOPICS[0]!);
   const [custom, setCustom] = useState("");
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
   const [count, setCount] = useState(10);
@@ -69,7 +69,7 @@ function Quiz() {
   }
 
   if (qs && !done) {
-    const q = qs[i];
+    const q = qs[i]!;
     return (
       <>
         <PageHeader eyebrow={`${finalTopic} · ${difficulty}`} title={`Question ${i + 1} of ${qs.length}`}><span className="font-mono">{fmtTime(secs)}</span></PageHeader>
@@ -99,7 +99,7 @@ function Quiz() {
           {qs.map((q, k) => (
             <div key={k} className={cn("card-surface border-l-4 p-4 text-sm", answers[k] === q.correctIndex ? "border-l-success" : "border-l-destructive")}>
               <p className="font-medium">{q.question}</p>
-              <p className="mt-1">Correct: {q.options[q.correctIndex]}{answers[k] !== q.correctIndex && <span className="text-muted-foreground"> · You: {q.options[answers[k]] ?? "—"}</span>}</p>
+              <p className="mt-1">Correct: {q.options[q.correctIndex]}{answers[k] !== q.correctIndex && <span className="text-muted-foreground"> · You: {q.options[answers[k] ?? -1] ?? "—"}</span>}</p>
               <p className="mt-1 text-muted-foreground">{q.explanation}</p>
             </div>
           ))}

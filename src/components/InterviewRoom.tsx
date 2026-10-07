@@ -38,7 +38,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" }) {
 
   const [category, setCategory] = useState(CATEGORIES[0].id);
   const cat = CATEGORIES.find((c) => c.id === category)!;
-  const [topic, setTopic] = useState(cat.topics[0]);
+  const [topic, setTopic] = useState(cat.topics[0] ?? "");
   const [context, setContext] = useState("");
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
   const [adaptive, setAdaptive] = useState(true);
@@ -56,8 +56,8 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" }) {
   const current = turns[turns.length - 1];
   const needsContext = category === "project" || category === "teach";
 
-  async function begin() {
-    if (needsContext && !context.trim()) return toast.error(category === "project" ? "Describe your project first" : "Tell us what concept you know");
+  async function begin(): Promise<void> {
+    if (needsContext && !context.trim()) { toast.error(category === "project" ? "Describe your project first" : "Tell us what concept you know"); return; }
     setBusy(true);
     try {
       const t = category === "teach" ? context.slice(0, 100) : category === "project" ? "Project Deep Dive" : topic;
@@ -73,7 +73,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" }) {
     }
   }
 
-  async function send() {
+  async function send(): Promise<void> {
     if (!current || !answer.trim()) return;
     setBusy(true);
     try {
@@ -89,6 +89,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" }) {
       setAnswer("");
       if (res.next && mode === "voice") speak(res.next.question);
       if (!res.next) await end();
+      return undefined;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Evaluation failed");
     } finally {
@@ -146,7 +147,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" }) {
             {CATEGORIES.map((c) => (
               <button
                 key={c.id}
-                onClick={() => { setCategory(c.id); setTopic(c.topics[0]); }}
+                onClick={() => { setCategory(c.id); setTopic(c.topics[0] ?? ""); }}
                 className={cn("rounded-lg border p-3 text-left text-sm transition", category === c.id ? "border-primary bg-primary/10" : "hover:bg-muted")}
               >
                 <p className="font-semibold">{c.label}</p>
@@ -230,7 +231,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" }) {
   );
 }
 
-export function EvaluationCard({ ev, rating, prev }: { ev: Evaluation; rating?: number; prev?: number }) {
+export function EvaluationCard({ ev, rating, prev }: { ev: Evaluation; rating?: number | undefined; prev?: number | undefined }) {
   const [open, setOpen] = useState(false);
   const bars: [string, number][] = [["Correctness", ev.correctness], ["Completeness", ev.completeness], ["Clarity", ev.clarity], ["Confidence", ev.confidence], ["Depth", ev.depth]];
   return (

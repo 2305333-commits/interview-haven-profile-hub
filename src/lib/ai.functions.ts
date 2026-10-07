@@ -119,7 +119,7 @@ export const startInterview = createServerFn({ method: "POST" })
     let level: string = levelFromManual(data.difficulty);
     if (data.adaptive) {
       const { data: r } = await supabase.from("topic_ratings").select("rating").eq("topic", data.topic).maybeSingle();
-      if (r) level = ["Easy", "Medium", "Medium+", "Hard", "Hard+", "Expert"][Math.min(5, Math.floor(Number(r.rating) / 1.8))];
+      if (r) level = ["Easy", "Medium", "Medium+", "Hard", "Hard+", "Expert"][Math.min(5, Math.floor(Number(r.rating) / 1.8))]!;
     }
     const { data: interview, error } = await supabase
       .from("interviews")
@@ -312,7 +312,7 @@ export const judgeCode = createServerFn({ method: "POST" })
         total_score: total,
         mastery: Math.round((total / attempts) * 10),
         confidence: Math.min(100, Math.round(100 * (1 - Math.exp(-attempts / 6)))),
-        history: [...((r?.history as unknown[]) ?? []), { t: new Date().toISOString(), r: rating }].slice(-50),
+        history: [...((r?.history as { t: string; r: number }[] | null) ?? []), { t: new Date().toISOString(), r: rating }].slice(-50),
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id,topic" },

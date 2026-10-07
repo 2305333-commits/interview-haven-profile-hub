@@ -35,24 +35,24 @@ function Practice() {
   const [tips, setTips] = useState(false);
 
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId) return undefined;
     const t = setInterval(() => setElapsed((e) => e + 1), 1000);
     return () => clearInterval(t);
   }, [sessionId, i]);
 
   async function start() {
     const pool = questions.filter((q) => !cat || q.category_id === cat).sort(() => Math.random() - 0.5).slice(0, count);
-    if (!pool.length) return toast.error("No questions in this category");
+    if (!pool.length) { toast.error("No questions in this category"); return; }
     const name = categories.find((c) => c.id === cat)?.name ?? "Mixed";
     const { data, error } = await supabase.from("sessions").insert({ title: `${name} practice`, category_id: cat }).select().single();
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setSessionId(data.id); setList(pool); setI(0); setElapsed(0);
   }
 
   async function next() {
-    if (!text.trim()) return toast.error("Write an answer first");
-    const { error } = await supabase.from("answers").insert({ session_id: sessionId!, question_id: list[i].id, body: text, self_rating: rating, notes: notes || null, time_spent_seconds: elapsed });
-    if (error) return toast.error(error.message);
+    if (!text.trim()) { toast.error("Write an answer first"); return; }
+    const { error } = await supabase.from("answers").insert({ session_id: sessionId!, question_id: list[i]!.id, body: text, self_rating: rating, notes: notes || null, time_spent_seconds: elapsed });
+    if (error) { toast.error(error.message); return; }
     setText(""); setRating(null); setNotes(""); setTips(false); setElapsed(0);
     if (i < list.length - 1) setI(i + 1);
     else {

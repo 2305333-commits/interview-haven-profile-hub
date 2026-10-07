@@ -20,7 +20,7 @@ type Lang = (typeof LANGS)[number][0];
 function Coding() {
   const gen = useServerFn(generateCodingProblem);
   const judge = useServerFn(judgeCode);
-  const [topic, setTopic] = useState(TOPICS[0]);
+  const [topic, setTopic] = useState<string>(TOPICS[0]!);
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("easy");
   const [lang, setLang] = useState<Lang>("python");
   const [problem, setProblem] = useState<CodingProblem | null>(null);

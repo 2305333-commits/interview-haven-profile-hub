@@ -59,7 +59,7 @@ function Dashboard() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {ratings.map((r) => {
               const h = (r.history as { r: number }[]) ?? [];
-              const prev = h.length > 1 ? h[h.length - 2].r : Number(r.rating);
+              const prev = h.length > 1 ? h[h.length - 2]!.r : Number(r.rating);
               const up = Number(r.rating) >= prev;
               return (
                 <div key={r.id} className="card-surface p-5">

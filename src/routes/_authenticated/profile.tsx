@@ -49,17 +49,17 @@ function Profile() {
       })
       .eq("id", p!.id);
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Profile saved");
     qc.invalidateQueries({ queryKey: ["profile"] });
   }
 
   async function upload(file: File) {
-    if (file.type !== "application/pdf") return toast.error("Please upload a PDF");
-    if (file.size > 10 * 1024 * 1024) return toast.error("Max 10 MB");
+    if (file.type !== "application/pdf") { toast.error("Please upload a PDF"); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("Max 10 MB"); return; }
     const path = `${p!.id}/resume.pdf`;
     const { error } = await supabase.storage.from("resumes").upload(path, file, { upsert: true, contentType: "application/pdf" });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     await supabase.from("profiles").update({ resume_path: path }).eq("id", p!.id);
     toast.success("Resume uploaded");
     qc.invalidateQueries({ queryKey: ["profile"] });

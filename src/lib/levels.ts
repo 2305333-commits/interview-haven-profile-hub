@@ -3,9 +3,9 @@ export type Level = (typeof LADDER)[number];
 
 export function stepLevel(level: string, score: number): Level {
   const i = Math.max(0, LADDER.indexOf(level as Level));
-  if (score >= 7) return LADDER[Math.min(LADDER.length - 1, i + 1)];
-  if (score <= 4) return LADDER[Math.max(0, i - 1)];
-  return LADDER[i];
+  if (score >= 7) return LADDER[Math.min(LADDER.length - 1, i + 1)]!;
+  if (score <= 4) return LADDER[Math.max(0, i - 1)]!;
+  return LADDER[i]!;
 }
 
 export function levelFromManual(d: "easy" | "medium" | "hard"): Level {
