@@ -8,3 +8,9 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+## InterviewVerse architecture
+- All AI calls live in `src/lib/ai.functions.ts` (server fns with `requireSupabaseAuth`) backed by `src/lib/ai.server.ts`; never call the AI gateway from the browser — keeps the key server-side.
+- Signed-in pages live under `src/routes/_authenticated/` and render inside `AppShell`; public pages are top-level — one auth gate, no per-page checks.
+- Topic ratings use the Elo-like helpers in `src/lib/levels.ts`; change scoring there only so interviews and coding stay consistent.
+- User data tables carry `user_id default auth.uid()` with owner-only RLS; the question bank is public read-only.
