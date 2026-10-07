@@ -13,7 +13,10 @@ export const Route = createFileRoute("/reset-password")({
       { title: "Set a new password — InterviewVerse" },
       { name: "description", content: "Choose a new password for your InterviewVerse account." },
       { property: "og:title", content: "Set a new password — InterviewVerse" },
-      { property: "og:description", content: "Choose a new password for your InterviewVerse account." },
+      {
+        property: "og:description",
+        content: "Choose a new password for your InterviewVerse account.",
+      },
     ],
   }),
   component: ResetPassword,
@@ -38,7 +41,10 @@ function ResetPassword() {
     setBusy(true);
     const { error } = await supabase.auth.updateUser({ password });
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Password updated");
     navigate({ to: "/dashboard" });
   }
@@ -49,14 +55,25 @@ function ResetPassword() {
         <Logo />
         <h1 className="mt-6 text-3xl font-bold">Set a new password</h1>
         {!ready ? (
-          <p className="mt-4 text-sm text-muted-foreground">Open this page from the reset link in your email.</p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Open this page from the reset link in your email.
+          </p>
         ) : (
           <form onSubmit={submit} className="mt-6 space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="pw">New password</Label>
-              <Input id="pw" type="password" minLength={6} required value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Input
+                id="pw"
+                type="password"
+                minLength={6}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
-            <Button className="w-full" disabled={busy}>Update password</Button>
+            <Button className="w-full" disabled={busy}>
+              Update password
+            </Button>
           </form>
         )}
       </div>

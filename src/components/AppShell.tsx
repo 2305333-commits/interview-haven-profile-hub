@@ -93,7 +93,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       {open && (
         <div className="fixed inset-x-0 top-12 z-20 space-y-4 bg-sidebar p-4 lg:hidden">
           {nav}
-          <button onClick={signOut} className="flex items-center gap-3 px-3 py-2 text-sm text-sidebar-foreground/70">
+          <button
+            onClick={signOut}
+            className="flex items-center gap-3 px-3 py-2 text-sm text-sidebar-foreground/70"
+          >
             <LogOut className="h-4 w-4" /> Sign out
           </button>
         </div>
@@ -106,11 +109,21 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
-export function PageHeader({ eyebrow, title, children }: { eyebrow?: string; title: string; children?: ReactNode }) {
+export function PageHeader({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow?: string;
+  title: string;
+  children?: ReactNode;
+}) {
   return (
     <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div>
-        {eyebrow && <p className="mb-1 font-mono text-xs uppercase tracking-widest text-primary">{eyebrow}</p>}
+        {eyebrow && (
+          <p className="mb-1 font-mono text-xs uppercase tracking-widest text-primary">{eyebrow}</p>
+        )}
         <h1 className="text-3xl font-bold sm:text-4xl">{title}</h1>
       </div>
       {children}
