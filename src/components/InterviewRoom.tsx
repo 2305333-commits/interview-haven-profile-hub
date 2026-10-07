@@ -36,7 +36,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" }) {
   const finish = useServerFn(finishInterview);
   const stt = useServerFn(transcribe);
 
-  const [category, setCategory] = useState(CATEGORIES[0].id);
+  const [category, setCategory] = useState(CATEGORIES[0]!.id);
   const cat = CATEGORIES.find((c) => c.id === category)!;
   const [topic, setTopic] = useState(cat.topics[0] ?? "");
   const [context, setContext] = useState("");
