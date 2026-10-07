@@ -3,9 +3,9 @@ export type Level = (typeof LADDER)[number];
 
 export function stepLevel(level: string, score: number): Level {
   const i = Math.max(0, LADDER.indexOf(level as Level));
-  if (score >= 7) return LADDER[Math.min(LADDER.length - 1, i + 1)];
-  if (score <= 4) return LADDER[Math.max(0, i - 1)];
-  return LADDER[i];
+  if (score >= 7) return LADDER[Math.min(LADDER.length - 1, i + 1)]!;
+  if (score <= 4) return LADDER[Math.max(0, i - 1)]!;
+  return LADDER[i]!;
 }
 
 export function levelFromManual(d: "easy" | "medium" | "hard"): Level {
@@ -26,19 +26,42 @@ export const CATEGORIES: { id: string; label: string; description: string; topic
     id: "cs",
     label: "CS Fundamentals",
     description: "OS, DBMS, networks, OOP and more",
-    topics: ["Operating Systems", "DBMS", "Computer Networks", "OOP", "Concurrency", "Memory Management"],
+    topics: [
+      "Operating Systems",
+      "DBMS",
+      "Computer Networks",
+      "OOP",
+      "Concurrency",
+      "Memory Management",
+    ],
   },
   {
     id: "dsa",
     label: "DSA",
     description: "Data structures and algorithms",
-    topics: ["Arrays", "Linked Lists", "Trees", "Graphs", "Dynamic Programming", "Greedy", "Backtracking", "Hashing"],
+    topics: [
+      "Arrays",
+      "Linked Lists",
+      "Trees",
+      "Graphs",
+      "Dynamic Programming",
+      "Greedy",
+      "Backtracking",
+      "Hashing",
+    ],
   },
   {
     id: "behavioral",
     label: "Behavioral / HR",
     description: "Stories, judgement and communication",
-    topics: ["Teamwork", "Leadership", "Failure", "Conflict Resolution", "Motivation", "Pressure Handling"],
+    topics: [
+      "Teamwork",
+      "Leadership",
+      "Failure",
+      "Conflict Resolution",
+      "Motivation",
+      "Pressure Handling",
+    ],
   },
   {
     id: "project",

@@ -81,7 +81,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "InterviewVerse — AI interview prep" },
-      { name: "description", content: "Adaptive AI mock interviews, coding practice and skill tracking for students and job seekers." },
+      {
+        name: "description",
+        content:
+          "Adaptive AI mock interviews, coding practice and skill tracking for students and job seekers.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
