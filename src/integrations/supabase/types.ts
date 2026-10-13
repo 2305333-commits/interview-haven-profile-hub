@@ -333,6 +333,39 @@ export type Database = {
         }
         Relationships: []
       }
+      resume_questions: {
+        Row: {
+          created_at: string
+          difficulty: string
+          id: string
+          kind: string
+          question: string
+          resume_item: string
+          topic: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          difficulty?: string
+          id?: string
+          kind?: string
+          question: string
+          resume_item: string
+          topic: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          difficulty?: string
+          id?: string
+          kind?: string
+          question?: string
+          resume_item?: string
+          topic?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           category_id: string | null
