@@ -37,11 +37,23 @@ export async function generateStructured<T>(
   schema: z.ZodType<T>,
   instructions: string,
   prompt: string,
+  pdf?: { filename: string; base64: string },
 ): Promise<T> {
+  const content = pdf
+    ? [
+        { type: "text" as const, text: prompt },
+        {
+          type: "file" as const,
+          filename: pdf.filename,
+          data: pdf.base64,
+          mediaType: "application/pdf",
+        },
+      ]
+    : prompt;
   const result = streamText({
     model: provider().responses(CHAT_MODEL),
     instructions,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: "user", content }],
     output: Output.object({ schema }),
     providerOptions: {
       openai: {
