@@ -168,6 +168,16 @@ function Coding() {
             </p>
             <p className="font-mono text-2xl font-semibold">{result.score.toFixed(1)}/10</p>
           </div>
+          <p className="font-mono text-xs text-muted-foreground">
+            Ran for real · {result.status}
+            {result.timeSec !== null && ` · ${result.timeSec}s`}
+            {result.memoryKb !== null && ` · ${Math.round(result.memoryKb / 1024)} MB`}
+          </p>
+          {result.error && (
+            <pre className="max-h-48 overflow-auto rounded-md bg-muted p-3 text-xs text-destructive">
+              {result.error}
+            </pre>
+          )}
           <p className="text-sm">{result.summary}</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {result.tests.map((t, i) => (
