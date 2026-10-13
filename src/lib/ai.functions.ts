@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { generateStructured, transcribeAudio } from "./ai.server";
+import { runCode, sameValue } from "./runner.server";
 import { levelFromManual, stepLevel, updateRating } from "./levels";
 
 /* ---------------- Quiz (replaces the old generate-quiz function) ---------------- */
@@ -354,20 +355,28 @@ export const generateCodingProblem = createServerFn({ method: "POST" })
     );
   });
 
-const judgeSchema = z.object({
-  tests: z.array(
-    z.object({ input: z.string(), expected: z.string(), actual: z.string(), passed: z.boolean() }),
-  ),
-  compiles: z.boolean(),
+const reviewSchema = z.object({
   timeComplexity: z.string(),
   spaceComplexity: z.string(),
   edgeCases: z.string(),
   style: z.string(),
   improvements: z.array(z.string()),
-  score: z.number(),
   summary: z.string(),
 });
-export type JudgeResult = z.infer<typeof judgeSchema>;
+const harnessSchema = z.object({ program: z.string() });
+
+type JudgeTest = { input: string; expected: string; actual: string; passed: boolean };
+type JudgeResultT = z.infer<typeof reviewSchema> & {
+  tests: JudgeTest[];
+  compiles: boolean;
+  score: number;
+  status: string;
+  error: string;
+  timeSec: number | null;
+  memoryKb: number | null;
+  executed: true;
+};
+export type JudgeResult = JudgeResultT;
 
 export const judgeCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -383,11 +392,48 @@ export const judgeCode = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const res = await generateStructured(
-      judgeSchema,
-      "You are a strict code judge. Mentally wrap the candidate code with any needed boilerplate (they may submit a full program or only the function), then trace it precisely on each test. Never assume correctness — simulate it. Score 0-10.",
-      `Problem: ${data.problem.title}\n${data.problem.statement}\nLanguage: ${data.language}\nHidden tests: ${JSON.stringify(data.problem.hiddenTests)}\n\nCandidate code:\n\`\`\`\n${data.code}\n\`\`\`\nReturn the result of every hidden test, complexity analysis, edge case notes, style notes, suggested improvements and an overall score.`,
+    const tests = data.problem.hiddenTests;
+    // 1. AI writes only the test driver around the untouched candidate code.
+    const { program } = await generateStructured(
+      harnessSchema,
+      "You build test drivers for an online judge. Embed the candidate code EXACTLY as given (character for character, never fix or change it). Add only imports, a wrapper class/main if the language needs one, and a driver. If the candidate already wrote a main/class, keep theirs and add the driver calls without editing their logic. For each test i (0-based), call the solution inside try/catch, then print a line `__T<i>__` followed on the next line by the result serialized as compact JSON (lists as [..], strings quoted, booleans true/false, null). On exception print `__T<i>__` then `ERROR: <message>`. Print nothing else.",
+      `Language: ${data.language}\nFunction signature hint: ${data.problem.signatures[data.language]}\nTests (input is the argument list): ${JSON.stringify(tests.map((t) => t.input))}\n\nCandidate code:\n${data.code}\n\nReturn the full runnable program.`,
     );
+    const squash = (x: string) => x.replace(/\s+/g, "");
+    const usable = squash(program).includes(squash(data.code));
+    // 2. Run it for real.
+    const run = await runCode(data.language, usable ? program : data.code);
+    const out = run.stdout;
+    const actuals = tests.map((_, i) => {
+      const m = out.split(`__T${i}__`)[1];
+      return m === undefined ? "" : (m.split(/__T\d+__/)[0] ?? "").trim();
+    });
+    const compiles = !run.compileOutput && run.status !== "Compilation Error";
+    const testResults: JudgeTest[] = tests.map((t, i) => ({
+      input: t.input,
+      expected: t.expected,
+      actual: actuals[i] || (compiles ? run.status : "Compilation error"),
+      passed: !!actuals[i] && !actuals[i]!.startsWith("ERROR") && sameValue(actuals[i]!, t.expected),
+    }));
+    const passedCount = testResults.filter((t) => t.passed).length;
+    const errorText = (run.compileOutput || run.stderr).slice(0, 2000);
+    // 3. AI reviews quality, given the real results.
+    const review = await generateStructured(
+      reviewSchema,
+      "You are a senior code reviewer. The code was actually executed; treat the given test results as ground truth.",
+      `Problem: ${data.problem.title}\n${data.problem.statement}\nLanguage: ${data.language}\nReal results: ${passedCount}/${tests.length} passed. Status: ${run.status}. Errors: ${errorText || "none"}\nRuntime: ${run.timeSec ?? "?"}s, memory ${run.memoryKb ?? "?"}KB\n\nCode:\n\`\`\`\n${data.code}\n\`\`\`\nGive time/space complexity, edge-case notes, style notes, improvements and a short summary.`,
+    );
+    const res: JudgeResultT = {
+      ...review,
+      tests: testResults,
+      compiles,
+      score: Math.round((passedCount / Math.max(1, tests.length)) * 80) / 10 + (passedCount === tests.length ? 2 : 0),
+      status: run.status,
+      error: errorText,
+      timeSec: run.timeSec,
+      memoryKb: run.memoryKb,
+      executed: true,
+    };
     const score = Math.min(10, Math.max(0, res.score));
     await supabase.from("coding_submissions").insert({
       user_id: userId,
