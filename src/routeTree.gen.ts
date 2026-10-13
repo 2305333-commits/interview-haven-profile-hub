@@ -20,6 +20,7 @@ import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedPracticeRouteImport } from './routes/_authenticated/practice'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedQuizRouteImport } from './routes/_authenticated/quiz'
+import { Route as AuthenticatedResumeQuestionsRouteImport } from './routes/_authenticated/resume-questions'
 import { Route as AuthenticatedVoiceRouteImport } from './routes/_authenticated/voice'
 import { Route as AuthenticatedSessionsIndexRouteImport } from './routes/_authenticated/sessions.index'
 import { Route as AuthenticatedSessionsIdRouteImport } from './routes/_authenticated/sessions.$id'
@@ -78,6 +79,12 @@ const AuthenticatedQuizRoute = AuthenticatedQuizRouteImport.update({
   path: '/quiz',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedResumeQuestionsRoute =
+  AuthenticatedResumeQuestionsRouteImport.update({
+    id: '/resume-questions',
+    path: '/resume-questions',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedVoiceRoute = AuthenticatedVoiceRouteImport.update({
   id: '/voice',
   path: '/voice',
@@ -106,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/practice': typeof AuthenticatedPracticeRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/quiz': typeof AuthenticatedQuizRoute
+  '/resume-questions': typeof AuthenticatedResumeQuestionsRoute
   '/voice': typeof AuthenticatedVoiceRoute
   '/sessions/$id': typeof AuthenticatedSessionsIdRoute
   '/sessions/': typeof AuthenticatedSessionsIndexRoute
@@ -121,6 +129,7 @@ export interface FileRoutesByTo {
   '/practice': typeof AuthenticatedPracticeRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/quiz': typeof AuthenticatedQuizRoute
+  '/resume-questions': typeof AuthenticatedResumeQuestionsRoute
   '/voice': typeof AuthenticatedVoiceRoute
   '/sessions/$id': typeof AuthenticatedSessionsIdRoute
   '/sessions': typeof AuthenticatedSessionsIndexRoute
@@ -138,6 +147,7 @@ export interface FileRoutesById {
   '/_authenticated/practice': typeof AuthenticatedPracticeRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/quiz': typeof AuthenticatedQuizRoute
+  '/_authenticated/resume-questions': typeof AuthenticatedResumeQuestionsRoute
   '/_authenticated/voice': typeof AuthenticatedVoiceRoute
   '/_authenticated/sessions/$id': typeof AuthenticatedSessionsIdRoute
   '/_authenticated/sessions/': typeof AuthenticatedSessionsIndexRoute
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
     | '/practice'
     | '/profile'
     | '/quiz'
+    | '/resume-questions'
     | '/voice'
     | '/sessions/$id'
     | '/sessions/'
@@ -170,6 +181,7 @@ export interface FileRouteTypes {
     | '/practice'
     | '/profile'
     | '/quiz'
+    | '/resume-questions'
     | '/voice'
     | '/sessions/$id'
     | '/sessions'
@@ -186,6 +198,7 @@ export interface FileRouteTypes {
     | '/_authenticated/practice'
     | '/_authenticated/profile'
     | '/_authenticated/quiz'
+    | '/_authenticated/resume-questions'
     | '/_authenticated/voice'
     | '/_authenticated/sessions/$id'
     | '/_authenticated/sessions/'
@@ -277,6 +290,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedQuizRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/resume-questions': {
+      id: '/_authenticated/resume-questions'
+      path: '/resume-questions'
+      fullPath: '/resume-questions'
+      preLoaderRoute: typeof AuthenticatedResumeQuestionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/voice': {
       id: '/_authenticated/voice'
       path: '/voice'
@@ -309,6 +329,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPracticeRoute: typeof AuthenticatedPracticeRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedQuizRoute: typeof AuthenticatedQuizRoute
+  AuthenticatedResumeQuestionsRoute: typeof AuthenticatedResumeQuestionsRoute
   AuthenticatedVoiceRoute: typeof AuthenticatedVoiceRoute
   AuthenticatedSessionsIdRoute: typeof AuthenticatedSessionsIdRoute
   AuthenticatedSessionsIndexRoute: typeof AuthenticatedSessionsIndexRoute
@@ -322,6 +343,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPracticeRoute: AuthenticatedPracticeRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedQuizRoute: AuthenticatedQuizRoute,
+  AuthenticatedResumeQuestionsRoute: AuthenticatedResumeQuestionsRoute,
   AuthenticatedVoiceRoute: AuthenticatedVoiceRoute,
   AuthenticatedSessionsIdRoute: AuthenticatedSessionsIdRoute,
   AuthenticatedSessionsIndexRoute: AuthenticatedSessionsIndexRoute,
