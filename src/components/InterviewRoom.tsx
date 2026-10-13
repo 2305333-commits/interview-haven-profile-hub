@@ -184,7 +184,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" }) {
       <div className="card-surface space-y-6 p-6">
         <div>
           <Label>Category</Label>
-          <div className="mt-2 grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="mt-2 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
             {CATEGORIES.map((c) => (
               <button
                 key={c.id}
@@ -203,7 +203,12 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" }) {
             ))}
           </div>
         </div>
-        {needsContext ? (
+        {category === "resume" ? (
+          <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            Your interviewer will ask questions from your resume question bank. Build or refresh
+            it on the Resume Questions page.
+          </p>
+        ) : needsContext ? (
           <div>
             <Label>
               {category === "project"

@@ -124,7 +124,19 @@ export const startInterview = createServerFn({ method: "POST" })
         .select("*")
         .eq("id", userId)
         .maybeSingle();
-      ctx = `Target role: ${p?.target_role ?? "-"}; College: ${p?.college ?? "-"}; Skills: ${(p?.skills ?? []).join(", ")}. ${ctx ?? ""}`;
+      const { data: bank } = await supabase
+        .from("resume_questions")
+        .select("question, resume_item")
+        .order("created_at", { ascending: false })
+        .limit(40);
+      const bankText = (bank ?? [])
+        .map((q) => `- [${q.resume_item}] ${q.question}`)
+        .join("\n");
+      ctx = `Target role: ${p?.target_role ?? "-"}; College: ${p?.college ?? "-"}; Skills: ${(p?.skills ?? []).join(", ")}. ${ctx ?? ""}${
+        bankText
+          ? `\nQuestions drawn from the candidate's resume (ask these, in varied order, adapting difficulty; follow up on their answers):\n${bankText}`
+          : ""
+      }`.slice(0, 8000);
     }
     let level: string = levelFromManual(data.difficulty);
     if (data.adaptive) {
@@ -422,3 +434,56 @@ export const transcribe = createServerFn({ method: "POST" })
     z.object({ audio: z.string().max(28_000_000), mime: z.string().max(60) }).parse(d),
   )
   .handler(async ({ data }) => ({ text: await transcribeAudio(data.audio, data.mime) }));
+
+/* ---------------- Resume question bank ---------------- */
+
+const resumeQSchema = z.object({
+  questions: z.array(
+    z.object({
+      question: z.string(),
+      topic: z.string(),
+      resumeItem: z.string(),
+      kind: z.enum(["technical", "project", "behavioral", "experience"]),
+      difficulty: z.enum(["easy", "medium", "hard"]),
+    }),
+  ),
+});
+
+export const generateResumeQuestions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ count: z.number().int().min(5).max(30) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: p } = await supabase
+      .from("profiles")
+      .select("resume_path, target_role, skills")
+      .eq("id", userId)
+      .maybeSingle();
+    if (!p?.resume_path) throw new Error("Upload your resume on the Profile page first.");
+    const { data: file, error } = await supabase.storage.from("resumes").download(p.resume_path);
+    if (error || !file) throw new Error("Could not read your resume. Try uploading it again.");
+    const buf = new Uint8Array(await file.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < buf.length; i += 0x8000)
+      bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    const out = await generateStructured(
+      resumeQSchema,
+      "You are a senior technical interviewer. Read the attached resume and write interview questions grounded in specific items on it: projects, internships/jobs, listed technologies, achievements. Every question must reference something concrete from the resume. Mix technical depth, project trade-offs, experience and behavioral questions.",
+      `Write ${data.count} questions. Target role: ${p.target_role ?? "not given"}. For each give: the question, a short topic (e.g. "React", "System Design"), resumeItem (the exact project/job/skill it comes from), kind, difficulty.`,
+      { filename: "resume.pdf", base64: btoa(bin) },
+    );
+    const rows = out.questions.slice(0, data.count).map((q) => ({
+      user_id: userId,
+      question: q.question,
+      topic: q.topic.slice(0, 80),
+      resume_item: q.resumeItem.slice(0, 200),
+      kind: q.kind,
+      difficulty: q.difficulty,
+    }));
+    await supabase.from("resume_questions").delete().eq("user_id", userId);
+    const { error: insErr } = await supabase.from("resume_questions").insert(rows);
+    if (insErr) throw new Error(insErr.message);
+    return { count: rows.length };
+  });

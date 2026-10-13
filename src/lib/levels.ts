@@ -64,6 +64,12 @@ export const CATEGORIES: { id: string; label: string; description: string; topic
     ],
   },
   {
+    id: "resume",
+    label: "From My Resume",
+    description: "Questions pulled from your uploaded resume",
+    topics: ["My Resume"],
+  },
+  {
     id: "project",
     label: "Project Deep Dive",
     description: "Describe a project, get grilled on it",
