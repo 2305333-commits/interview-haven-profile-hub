@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { fmtTime } from "@/lib/data";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -44,7 +45,7 @@ async function blobToBase64(b: Blob) {
   return btoa(s);
 }
 
-export function InterviewRoom({ mode }: { mode: "text" | "voice" }) {
+export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) {
   const qc = useQueryClient();
   const start = useServerFn(startInterview);
   const submit = useServerFn(submitAnswer);
@@ -69,6 +70,14 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" }) {
   const recRef = useRef<MediaRecorder | null>(null);
 
   const current = turns[turns.length - 1];
+  const [elapsed, setElapsed] = useState(0);
+  const waiting = !!current && !current.answer && !summary;
+  useEffect(() => {
+    setElapsed(0);
+    if (mode !== "written" || !waiting) return undefined;
+    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(t);
+  }, [mode, waiting, current?.id]);
   const needsContext = category === "project" || category === "teach";
 
   async function begin(): Promise<void> {
@@ -338,13 +347,22 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" }) {
           <Textarea
             rows={5}
             placeholder={
-              mode === "voice" ? "Tap the mic and answer out loud…" : "Type your answer…"
+              mode === "voice"
+                ? "Tap the mic and answer out loud…"
+                : mode === "written"
+                  ? "Write a complete, structured answer…"
+                  : "Type your answer…"
             }
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
           />
           <div className="flex flex-wrap justify-between gap-2">
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              {mode === "written" ? (
+                <span className="font-mono text-sm text-muted-foreground">
+                  ⏱ {fmtTime(elapsed)}
+                </span>
+              ) : (
               <Button
                 variant={recording ? "destructive" : "secondary"}
                 onClick={toggleRecord}
@@ -360,6 +378,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" }) {
                   </>
                 )}
               </Button>
+              )}
               <Button variant="ghost" onClick={end} disabled={busy}>
                 End interview
               </Button>

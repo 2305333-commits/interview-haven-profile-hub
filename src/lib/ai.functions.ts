@@ -111,7 +111,7 @@ export const startInterview = createServerFn({ method: "POST" })
         difficulty: z.enum(["easy", "medium", "hard"]),
         adaptive: z.boolean(),
         followUps: z.boolean(),
-        mode: z.enum(["text", "voice"]),
+        mode: z.enum(["text", "voice", "written"]),
         context: z.string().max(8000).nullable(),
       })
       .parse(d),
@@ -532,4 +532,79 @@ export const generateResumeQuestions = createServerFn({ method: "POST" })
     const { error: insErr } = await supabase.from("resume_questions").insert(rows);
     if (insErr) throw new Error(insErr.message);
     return { count: rows.length };
+  });
+
+/* ---------------- Concept practice ---------------- */
+
+const lessonSchema = z.object({
+  explanation: z.string(),
+  keyPoints: z.array(z.string()),
+  exercises: z.array(z.object({ prompt: z.string(), hint: z.string() })),
+});
+
+export const conceptLesson = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({ concept: z.string().min(1).max(120), level: z.enum(["easy", "medium", "hard"]) })
+      .parse(d),
+  )
+  .handler(async ({ data }) =>
+    generateStructured(
+      lessonSchema,
+      "You are a patient computer-science tutor. Write fresh, original material every time; never reuse stock textbook questions.",
+      `Concept: "${data.concept}" at ${data.level} level. Give a clear explanation (2 short paragraphs, plain language, one concrete example), 3-5 key points, and exactly 4 varied practice exercises (mix of explain-why, predict-the-output/apply, compare, and a tricky edge case) each with a short hint that doesn't give the answer away.`,
+    ),
+  );
+
+const checkSchema = z.object({
+  verdict: z.enum(["correct", "partial", "incorrect"]),
+  score: z.number(),
+  feedback: z.string(),
+  modelAnswer: z.string(),
+});
+
+export const checkConceptAnswer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        concept: z.string().max(120),
+        exercise: z.string().max(2000),
+        answer: z.string().min(1).max(6000),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) =>
+    generateStructured(
+      checkSchema,
+      "You are a supportive tutor grading a student's practice answer. Be honest and specific, encourage them, score 0-10.",
+      `Concept: ${data.concept}\nExercise: ${data.exercise}\nStudent answer: """${data.answer}"""\nGive a verdict, score, 2-4 sentences of feedback on what's right and what's missing, and a concise model answer.`,
+    ),
+  );
+
+/* ---------------- AI discussion ---------------- */
+
+export const discuss = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        messages: z
+          .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(8000) }))
+          .min(1)
+          .max(40),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const transcript = data.messages
+      .map((m) => `${m.role === "user" ? "Student" : "Mentor"}: ${m.content}`)
+      .join("\n\n");
+    const out = await generateStructured(
+      z.object({ reply: z.string() }),
+      "You are InterviewVerse's friendly mentor for students and job seekers. Discuss whatever the student brings up — concepts, doubts, code, career, interview prep. Explain clearly with examples, ask a guiding question when useful, and keep replies focused. Use Markdown-free plain text with short paragraphs and simple '-' bullet lists.",
+      `Conversation so far:\n${transcript}\n\nWrite the Mentor's next reply.`,
+    );
+    return { reply: out.reply };
   });
