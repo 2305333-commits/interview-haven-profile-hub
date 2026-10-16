@@ -14,7 +14,9 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedCodingRouteImport } from './routes/_authenticated/coding'
+import { Route as AuthenticatedConceptsRouteImport } from './routes/_authenticated/concepts'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedDiscussRouteImport } from './routes/_authenticated/discuss'
 import { Route as AuthenticatedInterviewRouteImport } from './routes/_authenticated/interview'
 import { Route as AuthenticatedPracticeRouteImport } from './routes/_authenticated/practice'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
@@ -48,9 +50,19 @@ const AuthenticatedCodingRoute = AuthenticatedCodingRouteImport.update({
   path: '/coding',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedConceptsRoute = AuthenticatedConceptsRouteImport.update({
+  id: '/concepts',
+  path: '/concepts',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDiscussRoute = AuthenticatedDiscussRouteImport.update({
+  id: '/discuss',
+  path: '/discuss',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedInterviewRoute = AuthenticatedInterviewRouteImport.update({
@@ -101,7 +113,9 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/coding': typeof AuthenticatedCodingRoute
+  '/concepts': typeof AuthenticatedConceptsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/discuss': typeof AuthenticatedDiscussRoute
   '/interview': typeof AuthenticatedInterviewRoute
   '/practice': typeof AuthenticatedPracticeRoute
   '/profile': typeof AuthenticatedProfileRoute
@@ -116,7 +130,9 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/coding': typeof AuthenticatedCodingRoute
+  '/concepts': typeof AuthenticatedConceptsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/discuss': typeof AuthenticatedDiscussRoute
   '/interview': typeof AuthenticatedInterviewRoute
   '/practice': typeof AuthenticatedPracticeRoute
   '/profile': typeof AuthenticatedProfileRoute
@@ -133,7 +149,9 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/coding': typeof AuthenticatedCodingRoute
+  '/_authenticated/concepts': typeof AuthenticatedConceptsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/discuss': typeof AuthenticatedDiscussRoute
   '/_authenticated/interview': typeof AuthenticatedInterviewRoute
   '/_authenticated/practice': typeof AuthenticatedPracticeRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
@@ -150,7 +168,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/coding'
+    | '/concepts'
     | '/dashboard'
+    | '/discuss'
     | '/interview'
     | '/practice'
     | '/profile'
@@ -165,7 +185,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/coding'
+    | '/concepts'
     | '/dashboard'
+    | '/discuss'
     | '/interview'
     | '/practice'
     | '/profile'
@@ -181,7 +203,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/_authenticated/coding'
+    | '/_authenticated/concepts'
     | '/_authenticated/dashboard'
+    | '/_authenticated/discuss'
     | '/_authenticated/interview'
     | '/_authenticated/practice'
     | '/_authenticated/profile'
@@ -236,11 +260,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCodingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/concepts': {
+      id: '/_authenticated/concepts'
+      path: '/concepts'
+      fullPath: '/concepts'
+      preLoaderRoute: typeof AuthenticatedConceptsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/discuss': {
+      id: '/_authenticated/discuss'
+      path: '/discuss'
+      fullPath: '/discuss'
+      preLoaderRoute: typeof AuthenticatedDiscussRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/interview': {
@@ -304,7 +342,9 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCodingRoute: typeof AuthenticatedCodingRoute
+  AuthenticatedConceptsRoute: typeof AuthenticatedConceptsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDiscussRoute: typeof AuthenticatedDiscussRoute
   AuthenticatedInterviewRoute: typeof AuthenticatedInterviewRoute
   AuthenticatedPracticeRoute: typeof AuthenticatedPracticeRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
@@ -317,7 +357,9 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCodingRoute: AuthenticatedCodingRoute,
+  AuthenticatedConceptsRoute: AuthenticatedConceptsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDiscussRoute: AuthenticatedDiscussRoute,
   AuthenticatedInterviewRoute: AuthenticatedInterviewRoute,
   AuthenticatedPracticeRoute: AuthenticatedPracticeRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
