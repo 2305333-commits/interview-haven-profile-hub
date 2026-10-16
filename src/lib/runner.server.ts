@@ -1,6 +1,10 @@
-// Runs code for real on Judge0 CE (RapidAPI). Server-only.
-const HOST = "judge0-ce.p.rapidapi.com";
-const LANG_ID = { python: 71, javascript: 63, java: 62, cpp: 54 } as const;
+// Runs code for real on Wandbox (free public compiler service, no key). Server-only.
+const COMPILER = {
+  python: "cpython-3.12.7",
+  javascript: "nodejs-20.17.0",
+  java: "openjdk-jdk-21+35",
+  cpp: "gcc-13.2.0",
+} as const;
 
 export type RunOutput = {
   status: string;
@@ -11,45 +15,39 @@ export type RunOutput = {
   memoryKb: number | null;
 };
 
-const b64 = (s: string) => Buffer.from(s, "utf8").toString("base64");
-const unb64 = (s: string | null) => (s ? Buffer.from(s, "base64").toString("utf8") : "");
-
-export async function runCode(language: keyof typeof LANG_ID, source: string): Promise<RunOutput> {
-  const key = process.env["JUDGE0_API_KEY"];
-  if (!key) throw new Error("The code runner isn't set up yet (missing Judge0 key).");
-  const res = await fetch(
-    `https://${HOST}/submissions?base64_encoded=true&wait=true&fields=stdout,stderr,compile_output,status,time,memory`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-RapidAPI-Key": key,
-        "X-RapidAPI-Host": HOST,
-      },
-      body: JSON.stringify({
-        language_id: LANG_ID[language],
-        source_code: b64(source),
-        cpu_time_limit: 5,
-        memory_limit: 256000,
-      }),
-    },
-  );
+export async function runCode(language: keyof typeof COMPILER, source: string): Promise<RunOutput> {
+  const started = Date.now();
+  const res = await fetch("https://wandbox.org/api/compile.json", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      compiler: COMPILER[language],
+      code: source,
+      ...(language === "cpp" ? { options: "c++17", "compiler-option-raw": "-O2" } : {}),
+    }),
+  });
   const text = await res.text();
   if (!res.ok) {
-    console.error("Judge0 failed", res.status, text);
-    if (res.status === 429) throw new Error("Daily code-run limit reached. Try again later.");
-    if (res.status === 401 || res.status === 403)
-      throw new Error("The code runner key was rejected. Check the Judge0 key.");
-    throw new Error(`Code runner error (${res.status}).`);
+    console.error("Wandbox failed", res.status, text);
+    throw new Error(`The code runner is busy (${res.status}). Please try again.`);
   }
   const j = JSON.parse(text);
+  const exit = String(j.status ?? "");
+  const compileOutput = String(j.compiler_error ?? "");
+  const status = j.signal
+    ? `Killed (${j.signal})`
+    : compileOutput && exit !== "0"
+      ? "Compilation Error"
+      : exit === "0"
+        ? "Accepted"
+        : `Runtime Error (exit ${exit})`;
   return {
-    status: j.status?.description ?? "Unknown",
-    stdout: unb64(j.stdout),
-    stderr: unb64(j.stderr),
-    compileOutput: unb64(j.compile_output),
-    timeSec: j.time ? Number(j.time) : null,
-    memoryKb: j.memory ?? null,
+    status,
+    stdout: String(j.program_output ?? ""),
+    stderr: String(j.program_error ?? ""),
+    compileOutput: status === "Compilation Error" ? compileOutput : "",
+    timeSec: Math.round((Date.now() - started) / 10) / 100,
+    memoryKb: null,
   };
 }
 
