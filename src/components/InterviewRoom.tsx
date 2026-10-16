@@ -44,7 +44,7 @@ async function blobToBase64(b: Blob) {
   return btoa(s);
 }
 
-export function InterviewRoom({ mode }: { mode: "text" | "voice" }) {
+export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) {
   const qc = useQueryClient();
   const start = useServerFn(startInterview);
   const submit = useServerFn(submitAnswer);

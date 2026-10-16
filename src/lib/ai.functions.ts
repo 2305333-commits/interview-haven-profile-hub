@@ -111,7 +111,7 @@ export const startInterview = createServerFn({ method: "POST" })
         difficulty: z.enum(["easy", "medium", "hard"]),
         adaptive: z.boolean(),
         followUps: z.boolean(),
-        mode: z.enum(["text", "voice"]),
+        mode: z.enum(["text", "voice", "written"]),
         context: z.string().max(8000).nullable(),
       })
       .parse(d),
