@@ -170,7 +170,7 @@ function Coding() {
           </div>
           <p className="font-mono text-xs text-muted-foreground">
             Ran for real · {result.status}
-            {result.timeSec !== null && ` · ${result.timeSec}s total`}
+            {result.timeSec !== null && ` · ${result.timeSec}s`}
             {result.memoryKb !== null && ` · ${Math.round(result.memoryKb / 1024)} MB`}
           </p>
           {result.error && (

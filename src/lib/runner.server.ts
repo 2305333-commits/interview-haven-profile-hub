@@ -16,13 +16,16 @@ export type RunOutput = {
 };
 
 export async function runCode(language: keyof typeof COMPILER, source: string): Promise<RunOutput> {
-  const started = Date.now();
   const res = await fetch("https://wandbox.org/api/compile.json", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       compiler: COMPILER[language],
-      code: source,
+      // Wandbox saves Java as prog.java, so a top-level public class won't compile.
+      code:
+        language === "java"
+          ? source.replace(/^(\s*)public\s+((?:final\s+)?class\s)/gm, "$1$2")
+          : source,
       ...(language === "cpp" ? { options: "c++17", "compiler-option-raw": "-O2" } : {}),
     }),
   });
@@ -46,7 +49,7 @@ export async function runCode(language: keyof typeof COMPILER, source: string): 
     stdout: String(j.program_output ?? ""),
     stderr: String(j.program_error ?? ""),
     compileOutput: status === "Compilation Error" ? compileOutput : "",
-    timeSec: Math.round((Date.now() - started) / 10) / 100,
+    timeSec: null,
     memoryKb: null,
   };
 }
