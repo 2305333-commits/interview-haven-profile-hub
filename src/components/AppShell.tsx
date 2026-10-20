@@ -20,7 +20,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-const NAV = [
+export const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/interview", label: "AI Interview", icon: MessagesSquare },
   { to: "/coding", label: "Coding", icon: Code2 },
