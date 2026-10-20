@@ -39,7 +39,10 @@ function Concepts() {
   const [busy, setBusy] = useState<string | null>(null);
 
   async function load(c = concept) {
-    if (!c.trim()) return toast.error("Pick or type a concept");
+    if (!c.trim()) {
+      toast.error("Pick or type a concept");
+      return;
+    }
     setBusy("lesson");
     try {
       const l = await lessonFn({ data: { concept: c.trim(), level } });
