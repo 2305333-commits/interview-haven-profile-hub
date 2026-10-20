@@ -82,8 +82,9 @@ function Landing() {
               AI interviewer · tutor · evaluator
             </p>
             <h1 className="text-5xl font-extrabold leading-[1.02] sm:text-7xl">
-              Find out what you <em className="text-accent not-italic">really</em> know before they
-              do.
+              Walk in ready.
+              <br />
+              Walk out <em className="text-accent not-italic">hired.</em>
             </h1>
             <p className="mt-6 max-w-xl text-lg text-ink-foreground/75">
               InterviewVerse runs adaptive mock interviews across CS fundamentals, DSA, behavioral
@@ -99,32 +100,56 @@ function Landing() {
               </Link>
             </Button>
           </div>
-          <div className="mt-20 grid grid-cols-2 gap-4 font-mono text-sm sm:grid-cols-4">
-            {[
-              ["DSA", "6.5 ↑"],
-              ["OS", "7.3 ↑"],
-              ["DBMS", "3.8 ↓"],
-              ["Behavioral", "7.1 ↑"],
-            ].map(([t, v]) => (
-              <div
-                key={t}
-                className="rounded-xl border border-ink-foreground/15 bg-ink-foreground/5 p-4"
-              >
-                <p className="text-ink-foreground/60">{t}</p>
-                <p className="mt-1 text-2xl font-semibold">Lv {v}</p>
-              </div>
-            ))}
+          <div className="mt-20 max-w-3xl">
+            <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-ink-foreground/50">
+              Sample skill report
+            </p>
+            <div className="grid grid-cols-2 gap-x-10 gap-y-4 font-mono text-sm sm:grid-cols-4">
+              {(
+                [
+                  ["DSA", 6.5, true],
+                  ["OS", 7.3, true],
+                  ["DBMS", 3.8, false],
+                  ["Behavioral", 7.1, true],
+                ] as const
+              ).map(([t, v, up]) => (
+                <div key={t} className="border-l-2 border-accent/60 pl-3">
+                  <p className="text-ink-foreground/60">{t}</p>
+                  <p className="mt-1 text-2xl font-semibold">
+                    Lv {v}{" "}
+                    <span className={up ? "text-sm text-primary" : "text-sm text-accent"}>
+                      {up ? "↑" : "↓"}
+                    </span>
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
-      <section className="mx-auto grid max-w-6xl gap-6 px-6 py-24 sm:grid-cols-2 lg:grid-cols-3">
-        {FEATURES.map(({ icon: Icon, title, body }) => (
-          <div key={title} className="card-surface p-6">
-            <Icon className="h-6 w-6 text-primary" />
-            <h3 className="mt-4 text-lg font-bold">{title}</h3>
-            <p className="mt-2 text-sm text-muted-foreground">{body}</p>
-          </div>
-        ))}
+      <section className="mx-auto max-w-6xl px-6 py-24">
+        <p className="font-mono text-xs uppercase tracking-[0.25em] text-primary">What you get</p>
+        <h2 className="mt-2 max-w-2xl text-3xl font-bold sm:text-4xl">
+          Everything a real interview throws at you, in one place.
+        </h2>
+        <div className="mt-12 grid gap-x-12 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map(({ icon: Icon, title, body }) => (
+            <div key={title} className="flex gap-4">
+              <Icon className="mt-1 h-5 w-5 shrink-0 text-primary" />
+              <div>
+                <h3 className="text-lg font-bold">{title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-16">
+          <Button asChild size="lg">
+            <Link to="/auth" search={{ mode: "signup" }}>
+              Start practicing free <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
       </section>
       <footer className="border-t py-8 text-center text-sm text-muted-foreground">
         © {new Date().getFullYear()} InterviewVerse
