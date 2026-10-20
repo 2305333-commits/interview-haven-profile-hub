@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## InterviewVerse architecture
+- Dashboard practice choices reuse the AppShell navigation entries so names and destinations stay consistent with the main menu.
 - All AI calls live in `src/lib/ai.functions.ts` (server fns with `requireSupabaseAuth`) backed by `src/lib/ai.server.ts`; never call the AI gateway from the browser — keeps the key server-side.
 - Signed-in pages live under `src/routes/_authenticated/` and render inside `AppShell`; public pages are top-level — one auth gate, no per-page checks.
 - Topic ratings use the Elo-like helpers in `src/lib/levels.ts`; change scoring there only so interviews and coding stay consistent.

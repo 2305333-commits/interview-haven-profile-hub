@@ -1,9 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Flame, MessagesSquare, Trophy, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, Flame, MessagesSquare, Trophy, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { PageHeader } from "@/components/AppShell";
+import { NAV, PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
 import {
   aggregateTags,
@@ -18,6 +26,10 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
     meta: [
       { title: "Dashboard — InterviewVerse" },
       { name: "description", content: "Your interview prep progress." },
+      { property: "og:title", content: "Dashboard — InterviewVerse" },
+      { property: "og:description", content: "Your interview prep progress and practice options." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Dashboard,
@@ -57,9 +69,27 @@ function Dashboard() {
         eyebrow="Dashboard"
         title={`Hey ${profile?.full_name?.split(" ")[0] ?? "there"} 👋`}
       >
-        <Button asChild>
-          <Link to="/interview">Start an interview</Link>
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button>
+              Start practicing <ChevronDown className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" sideOffset={8} className="w-64 max-w-[calc(100vw-2rem)]">
+            <DropdownMenuLabel>Choose your practice</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {NAV.filter(({ to }) => to !== "/dashboard" && to !== "/sessions" && to !== "/profile").map(
+              ({ to, label, icon: Icon }) => (
+                <DropdownMenuItem key={to} asChild className="cursor-pointer gap-3 py-3">
+                  <Link to={to}>
+                    <Icon className="h-4 w-4 text-primary" />
+                    {label}
+                  </Link>
+                </DropdownMenuItem>
+              ),
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </PageHeader>
 
       {completion < 100 && (

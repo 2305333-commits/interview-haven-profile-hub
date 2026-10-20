@@ -17,6 +17,8 @@ export const Route = createFileRoute("/")({
         property: "og:description",
         content: "An AI interviewer, tutor and evaluator that adapts to your real skill level.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Landing,
