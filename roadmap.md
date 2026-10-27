@@ -2,10 +2,10 @@
 - [x] Measure recorded pace, pauses, and transcript filler words.
 - [x] Include delivery signals in voice scoring and persist measurements in feedback.
 - [x] Test calculations and verify a live AI evaluation with delivery measurements.
-- [ ] Verify the signed-in recording and saved-feedback flow. Blocked: requesting user has no matching account; needs to sign in in the preview.
+- [x] Verify signed-in voice recording, evaluation, and saved delivery feedback with a spoken test feed.
 
 # Spoken and video interviews
-- [ ] Make voice questions and evaluation suitable for spoken explanations, never requiring code.
-- [ ] Generate fresh resume-based interview questions instead of reusing saved prompts.
-- [ ] Add a separate Video Interview with consent-based camera/microphone recording and combined feedback.
-- [ ] Test question rules and verify recording, evaluation, and saved feedback.
+- [x] Make voice questions and evaluation suitable for spoken explanations, never requiring code.
+- [x] Generate fresh resume-based interview questions instead of reusing saved prompts.
+- [x] Add a separate Video Interview with consent-based camera/microphone recording and combined feedback.
+- [x] Test question rules and verify recording, playback, retry, evaluation, mobile layouts, and saved feedback with spoken audio and a camera test pattern; verified unavailable visual evidence is not scored.

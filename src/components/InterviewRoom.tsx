@@ -19,6 +19,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { analyzeRecording, summarizeDelivery, type VoiceRecording } from "@/lib/voice-delivery";
+import { VideoAnswer } from "@/components/VideoAnswer";
+import type { VideoEvidence } from "@/lib/video-interview";
 
 type Turn = {
   id: string;
@@ -46,7 +48,7 @@ async function blobToBase64(b: Blob) {
   return btoa(s);
 }
 
-export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) {
+export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "video" }) {
   const qc = useQueryClient();
   const start = useServerFn(startInterview);
   const submit = useServerFn(submitAnswer);
@@ -70,6 +72,8 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
   const [recording, setRecording] = useState(false);
   const recRef = useRef<MediaRecorder | null>(null);
   const [recordings, setRecordings] = useState<VoiceRecording[]>([]);
+  const [videoEvidence, setVideoEvidence] = useState<VideoEvidence | null>(null);
+  const spoken = mode === "voice" || mode === "video";
   const mountedRef = useRef(true);
   const recordingDelivery = summarizeDelivery(recordings);
   useEffect(() => {
@@ -125,7 +129,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
       setSummary(null);
       setRecordings([]);
       setAnswer("");
-      if (mode === "voice") speak(res.turn.question);
+      if (spoken) speak(res.turn.question);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not start");
     } finally {
@@ -134,17 +138,19 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
   }
 
   async function send(): Promise<void> {
-    if (!current || !answer.trim()) return;
+    if (!current || (mode === "video" ? !videoEvidence : !answer.trim())) return;
     setBusy(true);
     try {
       const answeredCount = turns.length;
       const wantNext = answeredCount < count;
-      const res = await submit({ data: { turnId: current.id, answer, wantNext, ...(mode === "voice" ? { recordings } : {}) } });
+      const submittedAnswer = mode === "video" && videoEvidence ? (await stt({ data: { audio: videoEvidence.audio, mime: "audio/wav" } })).text : answer;
+      if (!submittedAnswer.trim()) throw new Error("No speech was detected. Please retry the recording.");
+      const res = await submit({ data: { turnId: current.id, answer: submittedAnswer, wantNext, ...(mode === "voice" ? { recordings } : {}), ...(mode === "video" && videoEvidence ? { video: videoEvidence } : {}) } });
       setTurns((ts) => {
         const copy = [...ts];
         copy[copy.length - 1] = {
           ...current,
-          answer,
+          answer: submittedAnswer,
           evaluation: res.evaluation,
           rating: res.rating,
           prevRating: res.previousRating,
@@ -154,7 +160,8 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
       });
       setAnswer("");
       setRecordings([]);
-      if (res.next && mode === "voice") speak(res.next.question);
+      setVideoEvidence(null);
+      if (res.next && spoken) speak(res.next.question);
       if (!res.next) await end();
       return undefined;
     } catch (e) {
@@ -247,8 +254,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
         </div>
         {category === "resume" ? (
           <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            Your interviewer will ask questions from your resume question bank. Build or refresh
-            it on the Resume Questions page.
+            Fresh questions will be written using your resume topics and profile. Refresh your resume topics on the Resume Questions page.
           </p>
         ) : needsContext ? (
           <div>
@@ -336,7 +342,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
               <span className="font-mono text-xs uppercase tracking-widest text-primary">
                 Q{i + 1} · {t.difficulty}
               </span>
-              {mode === "voice" && (
+              {spoken && (
                 <button onClick={() => speak(t.question)} aria-label="Replay">
                   <Volume2 className="h-4 w-4 text-muted-foreground" />
                 </button>
@@ -377,7 +383,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
         </div>
       ) : current && !current.answer ? (
         <div className="card-surface space-y-3 p-4">
-          <Textarea
+          {mode === "video" ? <VideoAnswer key={current.id} disabled={busy} onChange={setVideoEvidence} /> : <Textarea
             disabled={busy || recording}
             rows={5}
             placeholder={
@@ -389,7 +395,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
             }
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
-          />
+          />}
           {mode === "voice" && recordingDelivery && (
             <p className="text-xs text-muted-foreground" role="status">
               Recorded delivery · {recordingDelivery.wordsPerMinute} words/min · {recordingDelivery.pauseCount} pauses · {recordingDelivery.fillerCount} possible fillers
@@ -397,7 +403,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
           )}
           <div className="flex flex-wrap justify-between gap-2">
             <div className="flex items-center gap-2">
-              {mode === "written" ? (
+              {mode === "video" ? null : mode === "written" ? (
                 <span className="font-mono text-sm text-muted-foreground">
                   ⏱ {fmtTime(elapsed)}
                 </span>
@@ -422,7 +428,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
                 End interview
               </Button>
             </div>
-            <Button onClick={send} disabled={busy || recording || !answer.trim()}>
+            <Button onClick={send} disabled={busy || recording || (mode === "video" ? !videoEvidence : !answer.trim())}>
               {busy ? "Evaluating…" : "Submit answer"}
             </Button>
           </div>
@@ -466,6 +472,12 @@ export function EvaluationCard({
         )}
       </div>
       <p className="mt-2 text-sm">{ev.feedback}</p>
+      {ev.videoFeedback && <section className="mt-4 space-y-3 border-t pt-3" aria-label="Video feedback">
+        <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">Video interview feedback</h3><span className="font-mono text-sm">Overall practice · {ev.videoFeedback.overall === null ? "Unavailable" : `${ev.videoFeedback.overall.toFixed(1)}/10`}</span></div>
+        <p className="text-xs text-muted-foreground">Answer quality: {ev.score.toFixed(1)}/10 · Only answer quality updates your skill rating.</p>
+        {([["Audible delivery", ev.videoFeedback.audio], ["Interview presentation", ev.videoFeedback.presentation]] as const).map(([label, part]) => <div key={label}><p className="text-sm font-semibold">{label} <span className="font-mono text-primary">{part.score === null ? "Not assessable" : `${part.score.toFixed(1)}/10`}</span></p><p className="mt-1 text-sm text-muted-foreground">{part.feedback}</p></div>)}
+        <p className="text-xs text-muted-foreground">Presentation setting: {ev.videoFeedback.setting}. AI coaching estimates—not personality, emotion, or hiring predictions.</p>
+      </section>}
       {ev.voiceDelivery && (
         <section className="mt-4 border-t pt-3" aria-label="Voice delivery">
           <h3 className="text-sm font-semibold">Voice delivery</h3>

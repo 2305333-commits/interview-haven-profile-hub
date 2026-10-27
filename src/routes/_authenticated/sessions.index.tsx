@@ -47,12 +47,12 @@ function Sessions() {
       <div className="card-surface mb-10 divide-y">
         {interviews.map((i) => (
           <div key={i.id} className="flex justify-between p-4 text-sm">
-            <span>
+            <Link to="/interviews/$id" params={{ id: i.id }} className="min-w-0 flex-1 hover:text-primary">
               {i.topic}{" "}
               <span className="text-muted-foreground">
                 · {i.mode} · {new Date(i.created_at).toLocaleDateString()}
               </span>
-            </span>
+            </Link>
             <span className="font-mono">
               {i.avg_score !== null ? `${Number(i.avg_score).toFixed(1)}/10` : "in progress"}
             </span>
