@@ -24,6 +24,7 @@ import { Route as AuthenticatedQuizRouteImport } from './routes/_authenticated/q
 import { Route as AuthenticatedResumeQuestionsRouteImport } from './routes/_authenticated/resume-questions'
 import { Route as AuthenticatedVideoRouteImport } from './routes/_authenticated/video'
 import { Route as AuthenticatedVoiceRouteImport } from './routes/_authenticated/voice'
+import { Route as AuthenticatedInterviewsIdRouteImport } from './routes/_authenticated/interviews.$id'
 import { Route as AuthenticatedSessionsIndexRouteImport } from './routes/_authenticated/sessions.index'
 import { Route as AuthenticatedSessionsIdRouteImport } from './routes/_authenticated/sessions.$id'
 
@@ -102,6 +103,12 @@ const AuthenticatedVoiceRoute = AuthenticatedVoiceRouteImport.update({
   path: '/voice',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedInterviewsIdRoute =
+  AuthenticatedInterviewsIdRouteImport.update({
+    id: '/interviews/$id',
+    path: '/interviews/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSessionsIndexRoute =
   AuthenticatedSessionsIndexRouteImport.update({
     id: '/sessions/',
@@ -129,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/resume-questions': typeof AuthenticatedResumeQuestionsRoute
   '/video': typeof AuthenticatedVideoRoute
   '/voice': typeof AuthenticatedVoiceRoute
+  '/interviews/$id': typeof AuthenticatedInterviewsIdRoute
   '/sessions/$id': typeof AuthenticatedSessionsIdRoute
   '/sessions/': typeof AuthenticatedSessionsIndexRoute
 }
@@ -147,6 +155,7 @@ export interface FileRoutesByTo {
   '/resume-questions': typeof AuthenticatedResumeQuestionsRoute
   '/video': typeof AuthenticatedVideoRoute
   '/voice': typeof AuthenticatedVoiceRoute
+  '/interviews/$id': typeof AuthenticatedInterviewsIdRoute
   '/sessions/$id': typeof AuthenticatedSessionsIdRoute
   '/sessions': typeof AuthenticatedSessionsIndexRoute
 }
@@ -167,6 +176,7 @@ export interface FileRoutesById {
   '/_authenticated/resume-questions': typeof AuthenticatedResumeQuestionsRoute
   '/_authenticated/video': typeof AuthenticatedVideoRoute
   '/_authenticated/voice': typeof AuthenticatedVoiceRoute
+  '/_authenticated/interviews/$id': typeof AuthenticatedInterviewsIdRoute
   '/_authenticated/sessions/$id': typeof AuthenticatedSessionsIdRoute
   '/_authenticated/sessions/': typeof AuthenticatedSessionsIndexRoute
 }
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/resume-questions'
     | '/video'
     | '/voice'
+    | '/interviews/$id'
     | '/sessions/$id'
     | '/sessions/'
   fileRoutesByTo: FileRoutesByTo
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/resume-questions'
     | '/video'
     | '/voice'
+    | '/interviews/$id'
     | '/sessions/$id'
     | '/sessions'
   id:
@@ -224,6 +236,7 @@ export interface FileRouteTypes {
     | '/_authenticated/resume-questions'
     | '/_authenticated/video'
     | '/_authenticated/voice'
+    | '/_authenticated/interviews/$id'
     | '/_authenticated/sessions/$id'
     | '/_authenticated/sessions/'
   fileRoutesById: FileRoutesById
@@ -342,6 +355,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVoiceRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/interviews/$id': {
+      id: '/_authenticated/interviews/$id'
+      path: '/interviews/$id'
+      fullPath: '/interviews/$id'
+      preLoaderRoute: typeof AuthenticatedInterviewsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/sessions/': {
       id: '/_authenticated/sessions/'
       path: '/sessions'
@@ -371,6 +391,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedResumeQuestionsRoute: typeof AuthenticatedResumeQuestionsRoute
   AuthenticatedVideoRoute: typeof AuthenticatedVideoRoute
   AuthenticatedVoiceRoute: typeof AuthenticatedVoiceRoute
+  AuthenticatedInterviewsIdRoute: typeof AuthenticatedInterviewsIdRoute
   AuthenticatedSessionsIdRoute: typeof AuthenticatedSessionsIdRoute
   AuthenticatedSessionsIndexRoute: typeof AuthenticatedSessionsIndexRoute
 }
@@ -387,6 +408,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedResumeQuestionsRoute: AuthenticatedResumeQuestionsRoute,
   AuthenticatedVideoRoute: AuthenticatedVideoRoute,
   AuthenticatedVoiceRoute: AuthenticatedVoiceRoute,
+  AuthenticatedInterviewsIdRoute: AuthenticatedInterviewsIdRoute,
   AuthenticatedSessionsIdRoute: AuthenticatedSessionsIdRoute,
   AuthenticatedSessionsIndexRoute: AuthenticatedSessionsIndexRoute,
 }
