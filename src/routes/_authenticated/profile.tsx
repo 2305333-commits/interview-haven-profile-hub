@@ -14,6 +14,10 @@ import { profileCompletion, profileQuery } from "@/lib/data";
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
     meta: [
+      { property: "og:title", content: "Profile — InterviewVerse" },
+      { property: "og:description", content: "Edit your profile and resume." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Profile — InterviewVerse" },
       { name: "description", content: "Edit your profile and resume." },
     ],

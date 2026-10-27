@@ -16,6 +16,10 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/coding")({
   head: () => ({
     meta: [
+      { property: "og:title", content: "Coding — InterviewVerse" },
+      { property: "og:description", content: "LeetCode-style coding practice judged by AI." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Coding — InterviewVerse" },
       { name: "description", content: "LeetCode-style coding practice judged by AI." },
     ],

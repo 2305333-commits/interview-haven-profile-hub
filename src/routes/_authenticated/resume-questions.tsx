@@ -23,6 +23,10 @@ const resumeQuestionsQuery = queryOptions({
 export const Route = createFileRoute("/_authenticated/resume-questions")({
   head: () => ({
     meta: [
+      { property: "og:title", content: "Resume Questions — InterviewVerse" },
+      { property: "og:description", content: "Interview questions generated from your resume." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Resume Questions — InterviewVerse" },
       { name: "description", content: "Interview questions generated from your resume." },
     ],

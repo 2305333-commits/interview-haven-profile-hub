@@ -5,6 +5,8 @@ import { InterviewRoom } from "@/components/InterviewRoom";
 export const Route = createFileRoute("/_authenticated/practice")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Written Practice — InterviewVerse" },
       { name: "description", content: "Timed written answers to fresh AI-written questions." },
       { property: "og:title", content: "Written Practice — InterviewVerse" },

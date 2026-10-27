@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/concepts")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Concept Practice — InterviewVerse" },
       { name: "description", content: "Learn a concept and practice it with fresh AI exercises." },
       { property: "og:title", content: "Concept Practice — InterviewVerse" },
