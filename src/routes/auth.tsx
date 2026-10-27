@@ -14,6 +14,8 @@ export const Route = createFileRoute("/auth")({
     z.object({ mode: z.enum(["signin", "signup", "forgot"]).optional() }).parse(s),
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Sign in — InterviewVerse" },
       { name: "description", content: "Sign in or create your InterviewVerse account." },
       { property: "og:title", content: "Sign in — InterviewVerse" },

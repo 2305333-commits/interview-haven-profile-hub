@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 export const Route = createFileRoute("/_authenticated/discuss")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "AI Discussion — InterviewVerse" },
       { name: "description", content: "Talk through any concept, doubt or interview question with an AI mentor." },
       { property: "og:title", content: "AI Discussion — InterviewVerse" },

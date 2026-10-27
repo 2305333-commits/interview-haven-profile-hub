@@ -14,6 +14,10 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/quiz")({
   head: () => ({
     meta: [
+      { property: "og:title", content: "Quick Quiz — InterviewVerse" },
+      { property: "og:description", content: "AI-generated multiple choice quizzes." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Quick Quiz — InterviewVerse" },
       { name: "description", content: "AI-generated multiple choice quizzes." },
     ],

@@ -8,6 +8,10 @@ import { PageHeader } from "@/components/AppShell";
 export const Route = createFileRoute("/_authenticated/sessions/")({
   head: () => ({
     meta: [
+      { property: "og:title", content: "History — InterviewVerse" },
+      { property: "og:description", content: "Your past sessions and interviews." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "History — InterviewVerse" },
       { name: "description", content: "Your past sessions and interviews." },
     ],

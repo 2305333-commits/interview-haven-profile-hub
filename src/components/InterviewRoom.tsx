@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { analyzeRecording, summarizeDelivery, type VoiceRecording } from "@/lib/voice-delivery";
 
 type Turn = {
   id: string;
@@ -52,9 +53,9 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
   const finish = useServerFn(finishInterview);
   const stt = useServerFn(transcribe);
 
-  const [category, setCategory] = useState(CATEGORIES[0]!.id);
-  const cat = CATEGORIES.find((c) => c.id === category)!;
-  const [topic, setTopic] = useState(cat.topics[0] ?? "");
+  const [category, setCategory] = useState(CATEGORIES[0]?.id ?? "cs");
+  const cat = CATEGORIES.find((c) => c.id === category);
+  const [topic, setTopic] = useState(cat?.topics[0] ?? "");
   const [context, setContext] = useState("");
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
   const [adaptive, setAdaptive] = useState(true);
@@ -68,6 +69,19 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
   const [summary, setSummary] = useState<{ avg: number | null; xpGained: number } | null>(null);
   const [recording, setRecording] = useState(false);
   const recRef = useRef<MediaRecorder | null>(null);
+  const [recordings, setRecordings] = useState<VoiceRecording[]>([]);
+  const mountedRef = useRef(true);
+  const recordingDelivery = summarizeDelivery(recordings);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      const rec = recRef.current;
+      if (rec && rec.state !== "inactive") rec.stop();
+      rec?.stream.getTracks().forEach((track) => track.stop());
+      window.speechSynthesis?.cancel();
+    };
+  }, []);
 
   const current = turns[turns.length - 1];
   const [elapsed, setElapsed] = useState(0);
@@ -109,6 +123,8 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
       setInterviewId(res.interviewId);
       setTurns([res.turn]);
       setSummary(null);
+      setRecordings([]);
+      setAnswer("");
       if (mode === "voice") speak(res.turn.question);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not start");
@@ -123,7 +139,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
     try {
       const answeredCount = turns.length;
       const wantNext = answeredCount < count;
-      const res = await submit({ data: { turnId: current.id, answer, wantNext } });
+      const res = await submit({ data: { turnId: current.id, answer, wantNext, ...(mode === "voice" ? { recordings } : {}) } });
       setTurns((ts) => {
         const copy = [...ts];
         copy[copy.length - 1] = {
@@ -137,6 +153,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
         return copy;
       });
       setAnswer("");
+      setRecordings([]);
       if (res.next && mode === "voice") speak(res.next.question);
       if (!res.next) await end();
       return undefined;
@@ -161,19 +178,35 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
       return;
     }
     try {
+      window.speechSynthesis?.cancel();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mime = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4";
-      const rec = new MediaRecorder(stream, { mimeType: mime });
+      let rec: MediaRecorder;
+      try {
+        const supported = ["audio/webm", "audio/mp4"].find((type) => MediaRecorder.isTypeSupported(type));
+        rec = new MediaRecorder(stream, supported ? { mimeType: supported } : undefined);
+      } catch (error) {
+        stream.getTracks().forEach((track) => track.stop());
+        throw error;
+      }
+      const mime = rec.mimeType;
       const chunks: Blob[] = [];
       rec.ondataavailable = (e) => chunks.push(e.data);
       rec.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
+        if (!mountedRef.current) return;
         setRecording(false);
         const blob = new Blob(chunks, { type: mime });
         setBusy(true);
         try {
+          const timing = mode === "voice" ? await analyzeRecording(blob).catch(() => null) : null;
           const { text } = await stt({ data: { audio: await blobToBase64(blob), mime } });
+          if (!mountedRef.current) return;
           setAnswer((a) => (a ? a + " " : "") + text);
+          if (mode === "voice" && timing && text.trim()) {
+            setRecordings((rs) => [...rs, { timing, transcript: text }]);
+          } else if (mode === "voice") {
+            toast.info("Audio delivery measurements were unavailable for this recording; feedback will use the transcript.");
+          }
         } catch (e) {
           toast.error(e instanceof Error ? e.message : "Transcription failed");
         } finally {
@@ -235,7 +268,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
           <div>
             <Label>Topic</Label>
             <div className="mt-2 flex flex-wrap gap-2">
-              {cat.topics.map((t) => (
+              {cat?.topics.map((t) => (
                 <button
                   key={t}
                   onClick={() => setTopic(t)}
@@ -345,6 +378,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
       ) : current && !current.answer ? (
         <div className="card-surface space-y-3 p-4">
           <Textarea
+            disabled={busy || recording}
             rows={5}
             placeholder={
               mode === "voice"
@@ -356,6 +390,11 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
           />
+          {mode === "voice" && recordingDelivery && (
+            <p className="text-xs text-muted-foreground" role="status">
+              Recorded delivery · {recordingDelivery.wordsPerMinute} words/min · {recordingDelivery.pauseCount} pauses · {recordingDelivery.fillerCount} possible fillers
+            </p>
+          )}
           <div className="flex flex-wrap justify-between gap-2">
             <div className="flex items-center gap-2">
               {mode === "written" ? (
@@ -379,11 +418,11 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" }) 
                 )}
               </Button>
               )}
-              <Button variant="ghost" onClick={end} disabled={busy}>
+              <Button variant="ghost" onClick={end} disabled={busy || recording}>
                 End interview
               </Button>
             </div>
-            <Button onClick={send} disabled={busy || !answer.trim()}>
+            <Button onClick={send} disabled={busy || recording || !answer.trim()}>
               {busy ? "Evaluating…" : "Submit answer"}
             </Button>
           </div>
@@ -427,6 +466,18 @@ export function EvaluationCard({
         )}
       </div>
       <p className="mt-2 text-sm">{ev.feedback}</p>
+      {ev.voiceDelivery && (
+        <section className="mt-4 border-t pt-3" aria-label="Voice delivery">
+          <h3 className="text-sm font-semibold">Voice delivery</h3>
+          <dl className="mt-2 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+            <div><dt className="text-xs text-muted-foreground">Pace</dt><dd className="font-mono">{ev.voiceDelivery.wordsPerMinute} words/min</dd></div>
+            <div><dt className="text-xs text-muted-foreground">Internal pauses</dt><dd className="font-mono">{ev.voiceDelivery.pauseCount} · {ev.voiceDelivery.pauseSeconds.toFixed(1)}s total</dd></div>
+            <div><dt className="text-xs text-muted-foreground">Longest pause</dt><dd className="font-mono">{ev.voiceDelivery.longestPauseSeconds.toFixed(1)}s</dd></div>
+            <div><dt className="text-xs text-muted-foreground">Possible fillers</dt><dd className="font-mono">{ev.voiceDelivery.fillerCount} · {ev.voiceDelivery.fillersPer100Words}/100 words</dd></div>
+          </dl>
+          <p className="mt-2 text-xs text-muted-foreground">Estimates from the original recording. Noise and transcription can affect results; vocal tone and emotion are not measured.</p>
+        </section>
+      )}
       <div className="mt-3 grid grid-cols-5 gap-2">
         {bars.map(([k, v]) => (
           <div key={k}>
