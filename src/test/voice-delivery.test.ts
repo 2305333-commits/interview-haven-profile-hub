@@ -22,10 +22,10 @@ describe("Voice delivery", () => {
   it("calculates pace and filler density from the recorded transcript", () => {
     const timing = { durationSeconds: 60, speechSeconds: 40, pauseSeconds: 2, pauseCount: 1, longestPauseSeconds: 2 };
     const result = summarizeDelivery([{ timing, transcript: "Um I mean I like databases you know uh" }]);
-    expect(result?.wordCount).toBe(10);
-    expect(result?.wordsPerMinute).toBe(10);
+    expect(result?.wordCount).toBe(9);
+    expect(result?.wordsPerMinute).toBe(9);
     expect(result?.fillerCount).toBe(4);
-    expect(result?.fillersPer100Words).toBe(40);
+    expect(result?.fillersPer100Words).toBe(44.4);
   });
   it("combines recordings without counting time between takes", () => {
     const recording = { timing: { durationSeconds: 10, speechSeconds: 8, pauseSeconds: 1, pauseCount: 1, longestPauseSeconds: 1 }, transcript: "I explain this concept" };
