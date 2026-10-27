@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## InterviewVerse architecture
+- Voice delivery uses browser-decoded recording timing and the original transcript; keep calculations in `src/lib/voice-delivery.ts` and persist optional metrics inside evaluation JSON so old sessions stay compatible.
 - Dashboard practice choices reuse the AppShell navigation entries so names and destinations stay consistent with the main menu.
 - All AI calls live in `src/lib/ai.functions.ts` (server fns with `requireSupabaseAuth`) backed by `src/lib/ai.server.ts`; never call the AI gateway from the browser — keeps the key server-side.
 - Signed-in pages live under `src/routes/_authenticated/` and render inside `AppShell`; public pages are top-level — one auth gate, no per-page checks.

@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { generateStructured, transcribeAudio } from "./ai.server";
 import { runCode, sameValue } from "./runner.server";
 import { levelFromManual, stepLevel, updateRating } from "./levels";
+import { deliveryPrompt, summarizeDelivery, voiceRecordingSchema, type VoiceDelivery } from "./voice-delivery";
 
 /* ---------------- Quiz (replaces the old generate-quiz function) ---------------- */
 
@@ -62,7 +63,7 @@ const evalSchema = z.object({
   weaknesses: z.array(z.string()),
   needsFollowUp: z.boolean(),
 });
-export type Evaluation = z.infer<typeof evalSchema>;
+export type Evaluation = z.infer<typeof evalSchema> & { voiceDelivery?: VoiceDelivery };
 
 const INTERVIEWER =
   "You are a sharp but friendly technical interviewer for students and job seekers. Ask one clear question at a time, conversational in tone, no preamble, no numbering.";
@@ -195,6 +196,7 @@ export const submitAnswer = createServerFn({ method: "POST" })
         turnId: z.string().uuid(),
         answer: z.string().min(1).max(12000),
         wantNext: z.boolean(),
+        recordings: z.array(voiceRecordingSchema).max(30).optional(),
       })
       .parse(d),
   )
@@ -213,6 +215,7 @@ export const submitAnswer = createServerFn({ method: "POST" })
       .single();
     if (!interview) throw new Error("Interview not found.");
     const voice = interview.mode === "voice";
+    const delivery = voice ? summarizeDelivery(data.recordings ?? []) : null;
 
     const ev = await generateStructured(
       evalSchema,
@@ -221,12 +224,14 @@ export const submitAnswer = createServerFn({ method: "POST" })
 Difficulty: ${turn.difficulty}
 Question: ${turn.question}
 Candidate answer${voice ? " (spoken, transcribed — also judge spoken communication)" : ""}: """${data.answer}"""
+${voice ? deliveryPrompt(delivery) : ""}
 Evaluate technical correctness, completeness, communication clarity, confidence, depth and accuracy. Give an overall score, feedback (2-4 sentences), an improved version of their answer, an ideal answer, missing concepts (short tags), strengths and weaknesses (short topic tags like "Deadlocks" or "SQL Joins"), and whether a follow-up question would be valuable.`,
     );
     const score = Math.min(10, Math.max(0, ev.score));
+    const evaluation: Evaluation = { ...ev, score, ...(delivery ? { voiceDelivery: delivery } : {}) };
     await supabase
       .from("interview_turns")
-      .update({ answer: data.answer, score, evaluation: ev })
+      .update({ answer: data.answer, score, evaluation })
       .eq("id", turn.id);
 
     // Update topic rating
@@ -288,7 +293,7 @@ Evaluate technical correctness, completeness, communication clarity, confidence,
         .single();
       if (nt) next = { id: nt.id, question, difficulty: level };
     }
-    return { evaluation: { ...ev, score }, rating, previousRating: oldRating, next };
+    return { evaluation, rating, previousRating: oldRating, next };
   });
 
 export const finishInterview = createServerFn({ method: "POST" })
