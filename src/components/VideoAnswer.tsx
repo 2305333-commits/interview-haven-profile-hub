@@ -12,7 +12,7 @@ export function VideoAnswer({ disabled, onChange }: { disabled: boolean; onChang
   const [consent, setConsent] = useState(false), [setting, setSetting] = useState<VideoEvidence["setting"]>("professional");
   const [evidence, setEvidence] = useState<Omit<VideoEvidence, "setting" | "consent"> | null>(null);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; if (recorder.current?.state === "recording") recorder.current.stop(); stream.current?.getTracks().forEach((t) => t.stop()); }; }, []);
-  useEffect(() => { if (preview.current && ready && !url) preview.current.srcObject = stream.current; }, [ready, url]);
+  useEffect(() => { if (preview.current && ready) { preview.current.srcObject = url ? null : stream.current; if (url) preview.current.load(); } }, [ready, url]);
   useEffect(() => { return () => { if (url) URL.revokeObjectURL(url); }; }, [url]);
   useEffect(() => { onChange(consent && evidence && !recording && !processing ? { ...evidence, setting, consent: true } : null); }, [consent, evidence, setting, recording, processing, onChange]);
   useEffect(() => {
@@ -36,6 +36,7 @@ export function VideoAnswer({ disabled, onChange }: { disabled: boolean; onChang
   }
   function record() {
     const media = stream.current; if (!media) return;
+    window.speechSynthesis?.cancel();
     setError(""); setEvidence(null); setSeconds(0); frames.current = []; capture();
     try {
       const mime = ["video/webm;codecs=vp8,opus", "video/webm", "video/mp4"].find((m) => MediaRecorder.isTypeSupported(m));
