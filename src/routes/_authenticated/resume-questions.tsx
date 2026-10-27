@@ -65,8 +65,8 @@ function ResumeQuestions() {
         <p className="text-sm text-muted-foreground">
           {profile?.resume_path
             ? qs.length
-              ? `${qs.length} questions from your resume. Rebuilding replaces them.`
-              : "Your resume is uploaded. Build your question bank."
+              ? `${qs.length} saved resume examples. Interviews use their topics to write fresh questions, not reuse these prompts.`
+              : "Your resume is uploaded. Extract its interview topics and example questions."
             : "Upload a resume on your Profile first."}
         </p>
         <div className="flex gap-2">
