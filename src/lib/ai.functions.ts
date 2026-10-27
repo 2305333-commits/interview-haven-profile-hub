@@ -5,6 +5,9 @@ import { generateStructured, transcribeAudio } from "./ai.server";
 import { runCode, sameValue } from "./runner.server";
 import { levelFromManual, stepLevel, updateRating } from "./levels";
 import { deliveryPrompt, summarizeDelivery, voiceRecordingSchema, type VoiceDelivery } from "./voice-delivery";
+import { questionRules, resumeFacts, spokenEvaluationRules } from "./interview-rules";
+import { combineVideoFeedback, videoEvidenceSchema, type VideoFeedback } from "./video-interview";
+import { assessVideo } from "./video-assessment.server";
 
 /* ---------------- Quiz (replaces the old generate-quiz function) ---------------- */
 
@@ -63,7 +66,7 @@ const evalSchema = z.object({
   weaknesses: z.array(z.string()),
   needsFollowUp: z.boolean(),
 });
-export type Evaluation = z.infer<typeof evalSchema> & { voiceDelivery?: VoiceDelivery };
+export type Evaluation = z.infer<typeof evalSchema> & { voiceDelivery?: VoiceDelivery; videoFeedback?: VideoFeedback };
 
 const INTERVIEWER =
   "You are a sharp but friendly technical interviewer for students and job seekers. Ask one clear question at a time, conversational in tone, no preamble, no numbering.";
@@ -97,7 +100,7 @@ async function askQuestion(opts: {
 Difficulty level: ${opts.level} (ladder: Easy, Medium, Medium+, Hard, Hard+, Expert).
 ${hist ? `Conversation so far:\n${hist}\n` : ""}
 ${opts.followUp ? "Ask a natural follow-up that digs into a gap or interesting point in the last answer." : "Ask a new question that has not been asked yet."}
-${opts.voice ? "This is spoken aloud: keep it under 40 words." : "Keep it under 70 words."}`,
+${questionRules(opts.voice)}`,
   );
   return out.question.trim();
 }
@@ -112,7 +115,7 @@ export const startInterview = createServerFn({ method: "POST" })
         difficulty: z.enum(["easy", "medium", "hard"]),
         adaptive: z.boolean(),
         followUps: z.boolean(),
-        mode: z.enum(["text", "voice", "written"]),
+        mode: z.enum(["text", "voice", "written", "video"]),
         context: z.string().max(8000).nullable(),
       })
       .parse(d),
@@ -128,15 +131,13 @@ export const startInterview = createServerFn({ method: "POST" })
         .maybeSingle();
       const { data: bank } = await supabase
         .from("resume_questions")
-        .select("question, resume_item")
+        .select("topic, resume_item")
         .order("created_at", { ascending: false })
         .limit(40);
-      const bankText = (bank ?? [])
-        .map((q) => `- [${q.resume_item}] ${q.question}`)
-        .join("\n");
+      const bankText = resumeFacts(bank ?? []);
       ctx = `Target role: ${p?.target_role ?? "-"}; College: ${p?.college ?? "-"}; Skills: ${(p?.skills ?? []).join(", ")}. ${ctx ?? ""}${
         bankText
-          ? `\nQuestions drawn from the candidate's resume (ask these, in varied order, adapting difficulty; follow up on their answers):\n${bankText}`
+          ? `\nResume items as background facts only; write fresh questions grounded in these items:\n${bankText}`
           : ""
       }`.slice(0, 8000);
     }
@@ -150,7 +151,7 @@ export const startInterview = createServerFn({ method: "POST" })
       if (r)
         level = ["Easy", "Medium", "Medium+", "Hard", "Hard+", "Expert"][
           Math.min(5, Math.floor(Number(r.rating) / 1.8))
-        ]!;
+        ] ?? "Medium";
     }
     const { data: interview, error } = await supabase
       .from("interviews")
@@ -174,7 +175,7 @@ export const startInterview = createServerFn({ method: "POST" })
       level,
       history: [],
       followUp: false,
-      voice: data.mode === "voice",
+      voice: data.mode === "voice" || data.mode === "video",
     });
     const { data: turn, error: tErr } = await supabase
       .from("interview_turns")
@@ -197,6 +198,7 @@ export const submitAnswer = createServerFn({ method: "POST" })
         answer: z.string().min(1).max(12000),
         wantNext: z.boolean(),
         recordings: z.array(voiceRecordingSchema).max(30).optional(),
+        video: videoEvidenceSchema.optional(),
       })
       .parse(d),
   )
@@ -214,7 +216,11 @@ export const submitAnswer = createServerFn({ method: "POST" })
       .eq("id", turn.interview_id)
       .single();
     if (!interview) throw new Error("Interview not found.");
-    const voice = interview.mode === "voice";
+    const voice = interview.mode === "voice" || interview.mode === "video";
+    if (interview.mode === "video" && !data.video) throw new Error("Record an answer and consent to AI processing first.");
+    const key = process.env["LOVABLE_API_KEY"];
+    const videoAssessment = interview.mode === "video" && data.video
+      ? await assessVideo(key ?? "", data.video) : null;
     const delivery = voice ? summarizeDelivery(data.recordings ?? []) : null;
 
     const ev = await generateStructured(
@@ -225,14 +231,16 @@ Difficulty: ${turn.difficulty}
 Question: ${turn.question}
 Candidate answer${voice ? " (spoken, transcribed — also judge spoken communication)" : ""}: """${data.answer}"""
 ${voice ? deliveryPrompt(delivery) : ""}
+${voice ? spokenEvaluationRules : ""}
 Evaluate technical correctness, completeness, communication clarity, confidence, depth and accuracy. Give an overall score, feedback (2-4 sentences), an improved version of their answer, an ideal answer, missing concepts (short tags), strengths and weaknesses (short topic tags like "Deadlocks" or "SQL Joins"), and whether a follow-up question would be valuable.`,
     );
     const score = Math.min(10, Math.max(0, ev.score));
-    const evaluation: Evaluation = { ...ev, score, ...(delivery ? { voiceDelivery: delivery } : {}) };
-    await supabase
+    const evaluation: Evaluation = { ...ev, score, ...(delivery ? { voiceDelivery: delivery } : {}), ...(videoAssessment && data.video ? { videoFeedback: combineVideoFeedback(videoAssessment, score, data.video.setting) } : {}) };
+    const { error: saveError } = await supabase
       .from("interview_turns")
       .update({ answer: data.answer, score, evaluation })
       .eq("id", turn.id);
+    if (saveError) throw new Error(saveError.message);
 
     // Update topic rating
     const { data: r } = await supabase
