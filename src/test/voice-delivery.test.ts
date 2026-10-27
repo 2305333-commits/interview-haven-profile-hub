@@ -34,6 +34,7 @@ describe("Voice delivery", () => {
   });
   it("rejects impossible measurements", () => {
     expect(audioTimingSchema.safeParse({ durationSeconds: 2, speechSeconds: 3, pauseSeconds: 0, pauseCount: 0, longestPauseSeconds: 0 }).success).toBe(false);
+    expect(audioTimingSchema.safeParse(measureAudio(new Float32Array(1000).fill(0.1), 1000)).success).toBe(true);
   });
   it("gives measured delivery evidence to the evaluator", () => {
     const metrics = summarizeDelivery([{ timing: { durationSeconds: 60, speechSeconds: 40, pauseSeconds: 2, pauseCount: 1, longestPauseSeconds: 2 }, transcript: "um database transactions" }]);

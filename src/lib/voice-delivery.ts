@@ -48,7 +48,9 @@ export function measureAudio(samples: Float32Array, sampleRate: number): AudioTi
     } else if (heardSpeech) silence += seconds;
   }
   if (!heardSpeech) return null;
-  return { durationSeconds: samples.length / sampleRate, speechSeconds, pauseSeconds, pauseCount, longestPauseSeconds };
+  const durationSeconds = samples.length / sampleRate;
+  const round = (value: number) => Math.round(value * 1000) / 1000;
+  return { durationSeconds, speechSeconds: Math.min(durationSeconds, round(speechSeconds)), pauseSeconds: Math.min(durationSeconds, round(pauseSeconds)), pauseCount, longestPauseSeconds: round(longestPauseSeconds) };
 }
 
 export function summarizeDelivery(recordings: VoiceRecording[]): VoiceDelivery | null {
