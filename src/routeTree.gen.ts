@@ -22,6 +22,7 @@ import { Route as AuthenticatedPracticeRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedQuizRouteImport } from './routes/_authenticated/quiz'
 import { Route as AuthenticatedResumeQuestionsRouteImport } from './routes/_authenticated/resume-questions'
+import { Route as AuthenticatedVideoRouteImport } from './routes/_authenticated/video'
 import { Route as AuthenticatedVoiceRouteImport } from './routes/_authenticated/voice'
 import { Route as AuthenticatedSessionsIndexRouteImport } from './routes/_authenticated/sessions.index'
 import { Route as AuthenticatedSessionsIdRouteImport } from './routes/_authenticated/sessions.$id'
@@ -91,6 +92,11 @@ const AuthenticatedResumeQuestionsRoute =
     path: '/resume-questions',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedVideoRoute = AuthenticatedVideoRouteImport.update({
+  id: '/video',
+  path: '/video',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedVoiceRoute = AuthenticatedVoiceRouteImport.update({
   id: '/voice',
   path: '/voice',
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/quiz': typeof AuthenticatedQuizRoute
   '/resume-questions': typeof AuthenticatedResumeQuestionsRoute
+  '/video': typeof AuthenticatedVideoRoute
   '/voice': typeof AuthenticatedVoiceRoute
   '/sessions/$id': typeof AuthenticatedSessionsIdRoute
   '/sessions/': typeof AuthenticatedSessionsIndexRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/quiz': typeof AuthenticatedQuizRoute
   '/resume-questions': typeof AuthenticatedResumeQuestionsRoute
+  '/video': typeof AuthenticatedVideoRoute
   '/voice': typeof AuthenticatedVoiceRoute
   '/sessions/$id': typeof AuthenticatedSessionsIdRoute
   '/sessions': typeof AuthenticatedSessionsIndexRoute
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/quiz': typeof AuthenticatedQuizRoute
   '/_authenticated/resume-questions': typeof AuthenticatedResumeQuestionsRoute
+  '/_authenticated/video': typeof AuthenticatedVideoRoute
   '/_authenticated/voice': typeof AuthenticatedVoiceRoute
   '/_authenticated/sessions/$id': typeof AuthenticatedSessionsIdRoute
   '/_authenticated/sessions/': typeof AuthenticatedSessionsIndexRoute
@@ -176,6 +185,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/quiz'
     | '/resume-questions'
+    | '/video'
     | '/voice'
     | '/sessions/$id'
     | '/sessions/'
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/quiz'
     | '/resume-questions'
+    | '/video'
     | '/voice'
     | '/sessions/$id'
     | '/sessions'
@@ -211,6 +222,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/quiz'
     | '/_authenticated/resume-questions'
+    | '/_authenticated/video'
     | '/_authenticated/voice'
     | '/_authenticated/sessions/$id'
     | '/_authenticated/sessions/'
@@ -316,6 +328,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedResumeQuestionsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/video': {
+      id: '/_authenticated/video'
+      path: '/video'
+      fullPath: '/video'
+      preLoaderRoute: typeof AuthenticatedVideoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/voice': {
       id: '/_authenticated/voice'
       path: '/voice'
@@ -350,6 +369,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedQuizRoute: typeof AuthenticatedQuizRoute
   AuthenticatedResumeQuestionsRoute: typeof AuthenticatedResumeQuestionsRoute
+  AuthenticatedVideoRoute: typeof AuthenticatedVideoRoute
   AuthenticatedVoiceRoute: typeof AuthenticatedVoiceRoute
   AuthenticatedSessionsIdRoute: typeof AuthenticatedSessionsIdRoute
   AuthenticatedSessionsIndexRoute: typeof AuthenticatedSessionsIndexRoute
@@ -365,6 +385,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedQuizRoute: AuthenticatedQuizRoute,
   AuthenticatedResumeQuestionsRoute: AuthenticatedResumeQuestionsRoute,
+  AuthenticatedVideoRoute: AuthenticatedVideoRoute,
   AuthenticatedVoiceRoute: AuthenticatedVoiceRoute,
   AuthenticatedSessionsIdRoute: AuthenticatedSessionsIdRoute,
   AuthenticatedSessionsIndexRoute: AuthenticatedSessionsIndexRoute,
