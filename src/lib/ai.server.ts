@@ -1,9 +1,21 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { NoObjectGeneratedError, Output, streamText } from "ai";
 import type { z } from "zod";
+import { createLovableAiGatewayProvider } from "./ai-gateway/gateway-helpers.server";
 
 const GATEWAY = "https://ai.gateway.lovable.dev";
 export const CHAT_MODEL = "openai/gpt-6-astra";
+export const EVALUATION_MODEL = "google/gemini-3.8-flash";
+
+export async function generateEvaluation<T>(key: string, schema: z.ZodType<T>, instructions: string, prompt: string): Promise<T> {
+  const gateway = createLovableAiGatewayProvider(key, undefined, { baseURL: GATEWAY });
+  const result = streamText({ model: gateway(EVALUATION_MODEL), system: instructions, prompt, output: Output.object({ schema }), maxRetries: 0 });
+  try { return await result.output as T; }
+  catch (error) {
+    if (NoObjectGeneratedError.isInstance(error)) throw new Error("The evaluation returned an unexpected result. Your answer has been kept.");
+    throw error;
+  }
+}
 
 function apiKey() {
   const key = process.env["LOVABLE_API_KEY"];

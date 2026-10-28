@@ -8,6 +8,7 @@ import {
   finishInterview,
   startInterview,
   submitAnswer,
+  nextInterviewQuestion,
   transcribe,
   type Evaluation,
 } from "@/lib/ai.functions";
@@ -52,6 +53,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
   const qc = useQueryClient();
   const start = useServerFn(startInterview);
   const submit = useServerFn(submitAnswer);
+  const getNext = useServerFn(nextInterviewQuestion);
   const finish = useServerFn(finishInterview);
   const stt = useServerFn(transcribe);
 
@@ -68,6 +70,8 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
   const [turns, setTurns] = useState<Turn[]>([]);
   const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(false);
+  const [preparingNext, setPreparingNext] = useState(false);
+  const [nextFailed, setNextFailed] = useState(false);
   const [summary, setSummary] = useState<{ avg: number | null; xpGained: number } | null>(null);
   const [recording, setRecording] = useState(false);
   const recRef = useRef<MediaRecorder | null>(null);
@@ -155,20 +159,33 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
           rating: res.rating,
           prevRating: res.previousRating,
         };
-        if (res.next) copy.push(res.next);
         return copy;
       });
       setAnswer("");
       setRecordings([]);
       setVideoEvidence(null);
-      if (res.next && spoken) speak(res.next.question);
-      if (!res.next) await end();
+      setBusy(false);
+      if (wantNext) await continueInterview(current.id);
+      else await end();
       return undefined;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Evaluation failed");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function continueInterview(turnId: string) {
+    setPreparingNext(true); setNextFailed(false);
+    try {
+      const next = await getNext({ data: { turnId } });
+      if (!mountedRef.current) return;
+      setTurns((ts) => [...ts, next]);
+      if (spoken) speak(next.question);
+    } catch (error) {
+      setNextFailed(true);
+      toast.error(error instanceof Error ? error.message : "Could not prepare the next question.");
+    } finally { setPreparingNext(false); }
   }
 
   async function end() {
@@ -433,7 +450,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
             </Button>
           </div>
         </div>
-      ) : null}
+      ) : preparingNext ? <p role="status" className="text-sm text-muted-foreground">Preparing your next question…</p> : nextFailed && current ? <div className="flex gap-2"><Button onClick={() => continueInterview(current.id)}>Retry next question</Button><Button variant="ghost" onClick={end}>End interview</Button></div> : null}
     </div>
   );
 }

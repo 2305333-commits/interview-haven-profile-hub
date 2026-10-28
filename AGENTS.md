@@ -10,6 +10,8 @@
 <!-- LOVABLE:END -->
 
 ## InterviewVerse architecture
+- Interview evaluation uses the latency-focused evaluator in ai.server.ts; question generation keeps its existing model, and video evidence assessment runs concurrently with answer grading.
+- submitAnswer saves and returns feedback before nextInterviewQuestion runs; the client displays saved feedback during the separate adaptive follow-up request and allows retry without regrading.
 - Spoken interview constraints live in interview-rules.ts and apply to generation and evaluation; resume context uses facts only to avoid replaying saved prompts.
 - VideoAnswer owns temporary camera recordings and extracts complete WAV audio plus sampled frames; authenticated submitAnswer persists only optional feedback JSON and keeps presentation separate from topic ratings.
 - Video audio/frame assessment uses the verified audio-capable Gemini model in video-assessment.server.ts because the existing text evaluator cannot hear recordings.
