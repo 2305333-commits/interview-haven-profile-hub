@@ -8,6 +8,7 @@ import { deliveryPrompt, summarizeDelivery, voiceRecordingSchema, type VoiceDeli
 import { questionRules, resumeFacts, spokenEvaluationRules } from "./interview-rules";
 import { combineVideoFeedback, videoEvidenceSchema, type VideoFeedback } from "./video-interview";
 import { assessVideo } from "./video-assessment.server";
+import { evaluateTogether } from "./evaluation-workflow";
 
 /* ---------------- Quiz (replaces the old generate-quiz function) ---------------- */
 
@@ -221,9 +222,8 @@ export const submitAnswer = createServerFn({ method: "POST" })
     const key = process.env["LOVABLE_API_KEY"];
     const delivery = voice ? summarizeDelivery(data.recordings ?? []) : null;
 
-    const [videoAssessment, ev] = await Promise.all([
-      interview.mode === "video" && data.video ? assessVideo(key ?? "", data.video) : Promise.resolve(null),
-      generateEvaluation(key ?? "",
+    const [ev, videoAssessment] = await evaluateTogether(
+      () => generateEvaluation(key ?? "",
       evalSchema,
       "You are a rigorous but encouraging interview evaluator. Scores are 0-10 numbers. Be specific and concise.",
       `${categoryPrompt(interview.category, interview.topic, interview.context)}
@@ -232,9 +232,10 @@ Question: ${turn.question}
 Candidate answer${voice ? " (spoken, transcribed — also judge spoken communication)" : ""}: """${data.answer}"""
 ${voice ? deliveryPrompt(delivery) : ""}
 ${voice ? spokenEvaluationRules : ""}
-Evaluate technical correctness, completeness, communication clarity, confidence, depth and accuracy. Give an overall score, feedback (2-4 sentences), an improved version of their answer, an ideal answer, missing concepts (short tags), strengths and weaknesses (short topic tags like "Deadlocks" or "SQL Joins"), and whether a follow-up question would be valuable.`,
+Evaluate technical correctness, completeness, communication clarity, confidence, depth and accuracy. Give an overall score, feedback (2 concise sentences), an improved version of their answer (up to 80 words), an ideal answer (up to 80 words), missing concepts, strengths and weaknesses (up to 3 short topic tags each like "Deadlocks" or "SQL Joins"), and whether a follow-up question would be valuable. Preserve the specific technical explanation; avoid repeated advice.`,
       ),
-    ]);
+      () => interview.mode === "video" && data.video ? assessVideo(key ?? "", data.video) : Promise.resolve(null),
+    );
     const score = Math.min(10, Math.max(0, ev.score));
     const evaluation: Evaluation = { ...ev, score, ...(delivery ? { voiceDelivery: delivery } : {}), ...(videoAssessment && data.video ? { videoFeedback: combineVideoFeedback(videoAssessment, score, data.video.setting) } : {}) };
     const { error: saveError } = await supabase
