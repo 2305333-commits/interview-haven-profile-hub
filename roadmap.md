@@ -1,4 +1,5 @@
 # Voice delivery checks
+- [x] Speed up evaluations with a faster evaluator, parallel video checks, and feedback before next-question generation; signed-in checks measured 10.5s text and 9.1s video feedback, with saved feedback read-back and 15 tests passing. Timings vary; no guaranteed 2–3-second evaluation.
 - [x] Measure recorded pace, pauses, and transcript filler words.
 - [x] Include delivery signals in voice scoring and persist measurements in feedback.
 - [x] Test calculations and verify a live AI evaluation with delivery measurements.

@@ -1,13 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { generateStructured, transcribeAudio } from "./ai.server";
+import { generateStructured, generateEvaluation, transcribeAudio } from "./ai.server";
 import { runCode, sameValue } from "./runner.server";
 import { levelFromManual, stepLevel, updateRating } from "./levels";
 import { deliveryPrompt, summarizeDelivery, voiceRecordingSchema, type VoiceDelivery } from "./voice-delivery";
 import { questionRules, resumeFacts, spokenEvaluationRules } from "./interview-rules";
 import { combineVideoFeedback, videoEvidenceSchema, type VideoFeedback } from "./video-interview";
 import { assessVideo } from "./video-assessment.server";
+import { evaluateTogether } from "./evaluation-workflow";
 
 /* ---------------- Quiz (replaces the old generate-quiz function) ---------------- */
 
@@ -219,11 +220,10 @@ export const submitAnswer = createServerFn({ method: "POST" })
     const voice = interview.mode === "voice" || interview.mode === "video";
     if (interview.mode === "video" && !data.video) throw new Error("Record an answer and consent to AI processing first.");
     const key = process.env["LOVABLE_API_KEY"];
-    const videoAssessment = interview.mode === "video" && data.video
-      ? await assessVideo(key ?? "", data.video) : null;
     const delivery = voice ? summarizeDelivery(data.recordings ?? []) : null;
 
-    const ev = await generateStructured(
+    const [ev, videoAssessment] = await evaluateTogether(
+      () => generateEvaluation(key ?? "",
       evalSchema,
       "You are a rigorous but encouraging interview evaluator. Scores are 0-10 numbers. Be specific and concise.",
       `${categoryPrompt(interview.category, interview.topic, interview.context)}
@@ -232,7 +232,9 @@ Question: ${turn.question}
 Candidate answer${voice ? " (spoken, transcribed — also judge spoken communication)" : ""}: """${data.answer}"""
 ${voice ? deliveryPrompt(delivery) : ""}
 ${voice ? spokenEvaluationRules : ""}
-Evaluate technical correctness, completeness, communication clarity, confidence, depth and accuracy. Give an overall score, feedback (2-4 sentences), an improved version of their answer, an ideal answer, missing concepts (short tags), strengths and weaknesses (short topic tags like "Deadlocks" or "SQL Joins"), and whether a follow-up question would be valuable.`,
+Evaluate technical correctness, completeness, communication clarity, confidence, depth and accuracy. Give an overall score, feedback (2 concise sentences), an improved version of their answer (up to 80 words), an ideal answer (up to 80 words), missing concepts, strengths and weaknesses (up to 3 short topic tags each like "Deadlocks" or "SQL Joins"), and whether a follow-up question would be valuable. Preserve the specific technical explanation; avoid repeated advice.`,
+      ),
+      () => interview.mode === "video" && data.video ? assessVideo(key ?? "", data.video) : Promise.resolve(null),
     );
     const score = Math.min(10, Math.max(0, ev.score));
     const evaluation: Evaluation = { ...ev, score, ...(delivery ? { voiceDelivery: delivery } : {}), ...(videoAssessment && data.video ? { videoFeedback: combineVideoFeedback(videoAssessment, score, data.video.setting) } : {}) };
@@ -273,8 +275,24 @@ Evaluate technical correctness, completeness, communication clarity, confidence,
       { onConflict: "user_id,topic" },
     );
 
-    let next: { id: string; question: string; difficulty: string } | null = null;
-    if (data.wantNext) {
+    return { evaluation, rating, previousRating: oldRating, next: null, answer: data.answer };
+  });
+
+export const nextInterviewQuestion = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ turnId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: turn } = await supabase.from("interview_turns").select("*").eq("id", data.turnId).single();
+    if (!turn || turn.score === null) throw new Error("Submit this answer before continuing.");
+    const { data: interview } = await supabase.from("interviews").select("*").eq("id", turn.interview_id).single();
+    if (!interview || interview.completed_at) throw new Error("This interview has ended.");
+    const { data: allTurns } = await supabase.from("interview_turns").select("id, question, difficulty, answer").eq("interview_id", interview.id).order("created_at");
+    const existing = (allTurns ?? []).find((t) => !t.answer);
+    if (existing) return { id: existing.id, question: existing.question, difficulty: existing.difficulty };
+    const score = Number(turn.score);
+    const ev = turn.evaluation as unknown as Evaluation;
+    const voice = interview.mode === "voice" || interview.mode === "video";
       const level = interview.adaptive ? stepLevel(turn.difficulty, score) : turn.difficulty;
       const { data: prev } = await supabase
         .from("interview_turns")
@@ -299,9 +317,8 @@ Evaluate technical correctness, completeness, communication clarity, confidence,
         .insert({ user_id: userId, interview_id: interview.id, question, difficulty: level })
         .select()
         .single();
-      if (nt) next = { id: nt.id, question, difficulty: level };
-    }
-    return { evaluation, rating, previousRating: oldRating, next };
+      if (!nt) throw new Error("Could not prepare the next question. Please retry.");
+      return { id: nt.id, question, difficulty: level };
   });
 
 export const finishInterview = createServerFn({ method: "POST" })
