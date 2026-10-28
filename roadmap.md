@@ -1,4 +1,5 @@
 # Voice delivery checks
+- [ ] Speed up evaluations with a faster evaluator, parallel video checks, and feedback before next-question generation; verify live timings.
 - [x] Measure recorded pace, pauses, and transcript filler words.
 - [x] Include delivery signals in voice scoring and persist measurements in feedback.
 - [x] Test calculations and verify a live AI evaluation with delivery measurements.
