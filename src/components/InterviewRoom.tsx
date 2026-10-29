@@ -492,7 +492,12 @@ export function EvaluationCard({
       {ev.videoFeedback && <section className="mt-4 space-y-3 border-t pt-3" aria-label="Video feedback">
         <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">Video interview feedback</h3><span className="font-mono text-sm">Overall practice · {ev.videoFeedback.overall === null ? "Unavailable" : `${ev.videoFeedback.overall.toFixed(1)}/10`}</span></div>
         <p className="text-xs text-muted-foreground">Answer quality: {ev.score.toFixed(1)}/10 · Only answer quality updates your skill rating.</p>
-        {([["Audible delivery", ev.videoFeedback.audio], ["Interview presentation", ev.videoFeedback.presentation]] as const).map(([label, part]) => <div key={label}><p className="text-sm font-semibold">{label} <span className="font-mono text-primary">{part.score === null ? "Not assessable" : `${part.score.toFixed(1)}/10`}</span></p><p className="mt-1 text-sm text-muted-foreground">{part.feedback}</p></div>)}
+        {([["Audible delivery", ev.videoFeedback.audio], [ev.videoFeedback.outfit ? "Outfit score" : "Interview presentation", ev.videoFeedback.presentation]] as const).map(([label, part]) => <div key={label}><p className="text-sm font-semibold">{label} <span className="font-mono text-primary">{part.score === null ? "Not assessable" : `${part.score.toFixed(1)}/10`}</span></p><p className="mt-1 text-sm text-muted-foreground">{part.feedback}</p></div>)}
+        {ev.videoFeedback.outfit && (() => { const o = ev.videoFeedback.outfit; return <div className="rounded-md border p-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">{([["Formality", o.formality], ["Neatness", o.neatness], ["Fit", o.fit], ["Colors", o.colors], ["Camera framing", o.framing]] as const).map(([k, v]) => <div key={k}><p className="text-xs text-muted-foreground">{k}</p><p className="font-mono text-sm">{v === null ? "—" : `${v.toFixed(1)}`}</p><div className="mt-1 h-1.5 rounded bg-muted"><div className="h-1.5 rounded bg-primary" style={{ width: `${(v ?? 0) * 10}%` }} /></div></div>)}</div>
+          {o.tips.length > 0 && <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">{o.tips.map((t) => <li key={t}>{t}</li>)}</ul>}
+          <p className="mt-2 text-xs text-muted-foreground">Outfit score weights formality 40%, neatness 25%, fit 20%, colors 15%. Framing is advice only.</p>
+        </div>; })()}
         <p className="text-xs text-muted-foreground">Presentation setting: {ev.videoFeedback.setting}. AI coaching estimates—not personality, emotion, or hiring predictions.</p>
       </section>}
       {ev.voiceDelivery && (

@@ -25,3 +25,16 @@ describe("Interview rules", () => {
     expect(result.overall).toBe(8.9);
   });
 });
+import { outfitScore as _outfitScore, combineVideoFeedback as _combine } from "@/lib/video-interview";
+describe("outfit scoring", () => {
+  it("weights formality 40, neatness 25, fit 20, colors 15", () => {
+    expect(_outfitScore({ formality: 10, neatness: 8, fit: 6, colors: 4, framing: 2, tips: [] })).toBe(7.8);
+  });
+  it("is unscored when any outfit criterion is not visible", () => {
+    expect(_outfitScore({ formality: 9, neatness: null, fit: 8, colors: 8, framing: 9, tips: [] })).toBeNull();
+  });
+  it("uses the outfit score as the presentation score", () => {
+    const r = _combine({ audio: { score: 8, feedback: "" }, presentation: { score: 2, feedback: "" }, outfit: { formality: 10, neatness: 10, fit: 10, colors: 10, framing: 0, tips: [] } }, 10, "professional");
+    expect(r.presentation.score).toBe(10);
+  });
+});
