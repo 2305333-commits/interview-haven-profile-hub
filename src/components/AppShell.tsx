@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useWebMCP } from "use-webmcp-tool";
+import { runWebMCPTool } from "@/lib/webmcp-telemetry";
 
 export const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -48,6 +50,23 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const qc = useQueryClient();
+
+  useWebMCP({
+    name: "open_page",
+    description: "Open an InterviewVerse page from the main menu, e.g. AI Interview, Coding, Quick Quiz or History.",
+    inputSchema: {
+      type: "object",
+      properties: { page: { type: "string", enum: NAV.map((n) => n.label), description: "Menu label of the page to open." } },
+      required: ["page"],
+    },
+    execute: ({ page }: { page: string }) =>
+      runWebMCPTool("open_page", async () => {
+        const item = NAV.find((n) => n.label === page);
+        if (!item) throw new Error(`Unknown page; expected one of: ${NAV.map((n) => n.label).join(", ")}.`);
+        await navigate({ to: item.to });
+        return `Opened ${item.label}.`;
+      }),
+  });
 
   async function signOut() {
     await qc.cancelQueries();
