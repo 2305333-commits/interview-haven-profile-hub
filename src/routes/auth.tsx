@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/AppShell";
+import { oauthReturnPath } from "@/lib/oauth-return-path";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (s) =>
-    z.object({ mode: z.enum(["signin", "signup", "forgot"]).optional() }).parse(s),
+    z.object({ mode: z.enum(["signin", "signup", "forgot"]).optional(), next: z.string().optional() }).parse(s),
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },
@@ -26,7 +27,9 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
-  const { mode: initial } = Route.useSearch();
+  const { mode: initial, next: rawNext } = Route.useSearch();
+  const next = rawNext ? oauthReturnPath(rawNext) : "/dashboard";
+  const go = () => { if (next === "/dashboard") navigate({ to: "/dashboard" }); else window.location.href = next; };
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">(initial ?? "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,13 +40,14 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard" });
+      if (data.session) go();
     });
     const { data } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) navigate({ to: "/dashboard" });
+      if (session) go();
     });
     return () => data.subscription.unsubscribe();
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate, next]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,7 +58,7 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: window.location.origin + "/dashboard",
+            emailRedirectTo: new URL(next, window.location.origin).href,
             data: { full_name: name },
           },
         });
@@ -79,7 +83,7 @@ function AuthPage() {
 
   async function google() {
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/auth",
+      redirect_uri: window.location.origin + "/auth" + (next !== "/dashboard" ? "?next=" + encodeURIComponent(next) : ""),
     });
     if (result.error) toast.error(result.error.message ?? "Google sign-in failed");
   }
