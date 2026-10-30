@@ -1,4 +1,10 @@
 # Voice delivery checks
+# Pre-publication audit
+- [ ] Fix account-cache isolation, concurrent score saving, coding test integrity, and recording lifecycle issues.
+- [ ] Verify signed-in practice, quizzes, concepts, discussion, profile/resume, history, and agent access.
+- [ ] Check dependencies, security, all automated tests, and current preview errors.
+- [ ] Report remaining external-service and hosted sign-in limitations before publication.
+
 - [x] Speed up evaluations with a faster evaluator, parallel video checks, and feedback before next-question generation; signed-in checks measured 10.5s text and 9.1s video feedback, with saved feedback read-back and 15 tests passing. Timings vary; no guaranteed 2–3-second evaluation.
 - [x] Measure recorded pace, pauses, and transcript filler words.
 - [x] Include delivery signals in voice scoring and persist measurements in feedback.
