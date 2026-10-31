@@ -31,11 +31,12 @@ function ResetPassword() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (window.location.hash.includes("type=recovery")) setReady(true);
+    let mounted = true;
+    supabase.auth.getSession().then(({ data, error }) => { if (mounted) setReady(!error && !!data.session); });
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setReady(true);
     });
-    return () => data.subscription.unsubscribe();
+    return () => { mounted = false; data.subscription.unsubscribe(); };
   }, []);
 
   async function submit(e: React.FormEvent) {

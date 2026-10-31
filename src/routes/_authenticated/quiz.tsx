@@ -43,7 +43,7 @@ type Q = { question: string; options: string[]; correctIndex: number; explanatio
 function Quiz() {
   const gen = useServerFn(generateQuiz);
   const qc = useQueryClient();
-  const [topic, setTopic] = useState<string>(TOPICS[0]!);
+  const [topic, setTopic] = useState<string>(TOPICS[0] ?? "Operating Systems");
   const [custom, setCustom] = useState("");
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
   const [count, setCount] = useState(10);
@@ -57,14 +57,11 @@ function Quiz() {
   const history =
     useQuery({
       queryKey: ["quiz_results"],
-      queryFn: async () =>
-        (
-          await supabase
-            .from("quiz_results")
-            .select("*")
-            .order("created_at", { ascending: false })
-            .limit(20)
-        ).data ?? [],
+      queryFn: async () => {
+        const { data, error } = await supabase.from("quiz_results").select("*").order("created_at", { ascending: false }).limit(20);
+        if (error) throw new Error(error.message);
+        return data ?? [];
+      },
     }).data ?? [];
 
   useEffect(() => {
@@ -93,10 +90,10 @@ function Quiz() {
   }
 
   async function complete() {
-    if (!qs) return;
-    setDone(true);
+    if (!qs || busy) return;
+    setBusy(true);
     const score = qs.reduce((a, q, k) => a + (answers[k] === q.correctIndex ? 1 : 0), 0);
-    await supabase.from("quiz_results").insert({
+    const { error } = await supabase.from("quiz_results").insert({
       topic: finalTopic,
       difficulty,
       score,
@@ -104,11 +101,15 @@ function Quiz() {
       time_spent_seconds: secs,
       question_count: count,
     });
+    setBusy(false);
+    if (error) { toast.error("Could not save your quiz. Your answers are kept; press Finish to retry."); return; }
+    setDone(true);
     qc.invalidateQueries({ queryKey: ["quiz_results"] });
   }
 
   if (qs && !done) {
-    const q = qs[i]!;
+    const q = qs[i];
+    if (!q) return null;
     return (
       <>
         <PageHeader
@@ -140,7 +141,7 @@ function Quiz() {
             {i < qs.length - 1 ? (
               <Button onClick={() => setI(i + 1)}>Next</Button>
             ) : (
-              <Button onClick={complete}>Finish</Button>
+              <Button onClick={complete} disabled={busy}>{busy ? "Saving…" : "Finish"}</Button>
             )}
           </div>
         </div>

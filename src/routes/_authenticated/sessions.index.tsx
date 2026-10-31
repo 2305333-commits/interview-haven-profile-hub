@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { interviewsQuery } from "@/lib/data";
@@ -21,29 +23,30 @@ export const Route = createFileRoute("/_authenticated/sessions/")({
 
 function Sessions() {
   const qc = useQueryClient();
-  const sessions =
-    useQuery({
-      queryKey: ["sessions"],
-      queryFn: async () =>
-        (
-          await supabase
-            .from("sessions")
-            .select("*, category:categories(name), answers(count)")
-            .order("started_at", { ascending: false })
-        ).data ?? [],
-    }).data ?? [];
-  const interviews = useQuery(interviewsQuery).data ?? [];
+  const sessionsResult = useQuery({
+    queryKey: ["sessions"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("sessions").select("*, category:categories(name), answers(count)").order("started_at", { ascending: false });
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    },
+  });
+  const interviewsResult = useQuery(interviewsQuery);
+  const sessions = sessionsResult.data ?? [];
+  const interviews = interviewsResult.data ?? [];
 
   async function del(id: string) {
     if (!confirm("Delete this session?")) return;
-    await supabase.from("sessions").delete().eq("id", id);
+    const { error } = await supabase.from("sessions").delete().eq("id", id);
+    if (error) { toast.error("Could not delete the session. Please retry."); return; }
     qc.invalidateQueries({ queryKey: ["sessions"] });
   }
 
   return (
     <>
       <PageHeader eyebrow="History" title="Your sessions" />
-      <h2 className="mb-3 text-xl font-bold">AI interviews</h2>
+      {(sessionsResult.error || interviewsResult.error) && <p role="alert">Could not load history. <Button onClick={() => { sessionsResult.refetch(); interviewsResult.refetch(); }}>Retry</Button></p>}
+      <h2 className="mb-3 text-xl font-bold">AI interviews & written practice</h2>
       <div className="card-surface mb-10 divide-y">
         {interviews.map((i) => (
           <div key={i.id} className="flex justify-between p-4 text-sm">
@@ -62,7 +65,7 @@ function Sessions() {
           <p className="p-4 text-sm text-muted-foreground">No AI interviews yet.</p>
         )}
       </div>
-      <h2 className="mb-3 text-xl font-bold">Written practice</h2>
+      <h2 className="mb-3 text-xl font-bold">Earlier practice sessions</h2>
       <div className="card-surface divide-y">
         {sessions.map((s) => (
           <div key={s.id} className="flex items-center justify-between p-4 text-sm">
