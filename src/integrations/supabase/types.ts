@@ -481,6 +481,16 @@ export type Database = {
         Args: { p_path: string; p_rows: Json }
         Returns: number
       }
+      save_coding_result: {
+        Args: {
+          p_code: string
+          p_language: string
+          p_problem: string
+          p_result: Json
+          p_user: string
+        }
+        Returns: undefined
+      }
       save_interview_answer: {
         Args: { p_answer: string; p_evaluation: Json; p_turn: string }
         Returns: Json
