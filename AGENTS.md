@@ -23,3 +23,6 @@
 - Topic ratings use the Elo-like helpers in `src/lib/levels.ts`; change scoring there only so interviews and coding stay consistent.
 - User data tables carry `user_id default auth.uid()` with owner-only RLS; the question bank is public read-only.
 - External agent access (MCP) lives in `src/lib/mcp/` with one tool per file, OAuth-verified and queried through `supabaseForUser` so owner-only RLS still applies; consent page is `src/routes/[.]lovable.oauth.consent.tsx` and `/auth` honors a validated `next` return path.
+
+- Interview answer, completion, next-turn and resume replacement writes use owner-scoped transactional RPCs to make concurrent retries safe; coding problems and tests are server-only and privileged access always checks the authenticated owner.
+- Rating math remains defined in levels.ts; transactional SQL mirrors the same Elo formula so increments cannot be lost under concurrent submissions. Keep their regression checks aligned.
