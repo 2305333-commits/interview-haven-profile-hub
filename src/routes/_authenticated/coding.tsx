@@ -49,7 +49,7 @@ type Lang = (typeof LANGS)[number][0];
 function Coding() {
   const gen = useServerFn(generateCodingProblem);
   const judge = useServerFn(judgeCode);
-  const [topic, setTopic] = useState<string>(TOPICS[0]!);
+  const [topic, setTopic] = useState<string>(TOPICS[0] ?? "Arrays");
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("easy");
   const [lang, setLang] = useState<Lang>("python");
   const [problem, setProblem] = useState<CodingProblem | null>(null);
@@ -75,7 +75,7 @@ function Coding() {
     if (!problem) return;
     setBusy("judge");
     try {
-      setResult(await judge({ data: { problem, topic, language: lang, code } }));
+      setResult(await judge({ data: { problemId: problem.id, language: lang, code } }));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Judging failed");
     } finally {
@@ -137,7 +137,7 @@ function Coding() {
               ))}
             </ul>
             <p className="text-xs text-muted-foreground">
-              Write the whole program or only the function — both work. {problem.hiddenTests.length}{" "}
+              Write the whole program or only the function — both work. {problem.testCount}{" "}
               hidden tests.
             </p>
           </div>

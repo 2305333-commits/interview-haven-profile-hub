@@ -58,7 +58,7 @@ function Discuss() {
     <>
       <PageHeader eyebrow="Your study buddy" title="AI Discussion">
         {msgs.length > 0 && (
-          <Button variant="ghost" size="sm" onClick={() => setMsgs([])}>
+          <Button variant="ghost" size="sm" disabled={busy} onClick={() => setMsgs([])}>
             New chat
           </Button>
         )}

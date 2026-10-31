@@ -14,7 +14,7 @@ const oauth = () => (supabase.auth as unknown as { oauth: OAuthApi }).oauth;
 
 export const Route = createFileRoute("/.lovable/oauth/consent")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Connect an app — InterviewVerse" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Connect an app — InterviewVerse" }, { name: "description", content: "Approve or decline an assistant connection to your own InterviewVerse history and skill ratings." }, { property: "og:title", content: "Connect an app — InterviewVerse" }, { property: "og:description", content: "Manage assistant access to your own interview practice data." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   validateSearch: (s: Record<string, unknown>) => ({
     authorization_id: typeof s['authorization_id'] === "string" ? s['authorization_id'] : "",
   }),
@@ -25,7 +25,8 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
     return { email: data.session.user.email ?? "" };
   },
   loader: async ({ location }) => {
-    const id = new URLSearchParams(location.search).get("authorization_id")!;
+    const id = new URLSearchParams(location.search).get("authorization_id");
+    if (!id) throw new Error("This connection link is missing its authorization ID.");
     const { data, error } = await oauth().getAuthorizationDetails(id);
     if (error) throw new Error(error.message || "This connection request expired or is invalid.");
     const immediate = data?.redirect_url ?? data?.redirect_to;
@@ -66,14 +67,12 @@ function Consent() {
   async function decide(approve: boolean) {
     setBusy(true);
     setError(null);
-    const { data, error } = approve ? await oauth().approveAuthorization(authorization_id) : await oauth().denyAuthorization(authorization_id);
-    const target = data?.redirect_url ?? data?.redirect_to;
-    if (error || !target) {
-      setBusy(false);
-      setError(error?.message ?? "No redirect was returned. Please try again.");
-      return;
-    }
-    window.location.href = target;
+    try {
+      const { data, error } = approve ? await oauth().approveAuthorization(authorization_id) : await oauth().denyAuthorization(authorization_id);
+      const target = data?.redirect_url ?? data?.redirect_to;
+      if (error || !target) throw new Error(error?.message ?? "No redirect was returned. Please try again.");
+      window.location.href = target;
+    } catch (e) { setError(e instanceof Error ? e.message : "Connection failed. Please retry."); setBusy(false); }
   }
 
   return (

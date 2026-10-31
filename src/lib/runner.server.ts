@@ -19,6 +19,7 @@ export async function runCode(language: keyof typeof COMPILER, source: string): 
   const res = await fetch("https://wandbox.org/api/compile.json", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(45000),
     body: JSON.stringify({
       compiler: COMPILER[language],
       // Wandbox saves Java as prog.java, so a top-level public class won't compile.
@@ -54,15 +55,16 @@ export async function runCode(language: keyof typeof COMPILER, source: string): 
   };
 }
 
-/** Loose comparison: ignores whitespace, quote style and boolean/null casing. */
+/** Compare canonical JSON without altering string contents. */
 export function sameValue(a: string, b: string) {
-  const n = (s: string) =>
-    s
-      .trim()
-      .replace(/'/g, '"')
-      .replace(/\bTrue\b/g, "true")
-      .replace(/\bFalse\b/g, "false")
-      .replace(/\bNone\b/g, "null")
-      .replace(/\s+/g, "");
-  return n(a) === n(b);
+  const equal = (x: unknown, y: unknown): boolean => {
+    if (x === y) return true;
+    if (Array.isArray(x) && Array.isArray(y)) return x.length === y.length && x.every((v, i) => equal(v, y[i]));
+    if (x && y && typeof x === "object" && typeof y === "object" && !Array.isArray(x) && !Array.isArray(y)) {
+      const left = x as Record<string, unknown>, right = y as Record<string, unknown>;
+      return Object.keys(left).length === Object.keys(right).length && Object.keys(left).every((k) => Object.hasOwn(right, k) && equal(left[k], right[k]));
+    }
+    return false;
+  };
+  try { return equal(JSON.parse(a), JSON.parse(b)); } catch { return false; }
 }

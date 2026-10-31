@@ -41,6 +41,7 @@ function Concepts() {
   const [busy, setBusy] = useState<string | null>(null);
 
   async function load(c = concept) {
+    if (busy) return;
     if (!c.trim()) {
       toast.error("Pick or type a concept");
       return;
@@ -62,10 +63,10 @@ function Concepts() {
 
   async function check(i: number) {
     const a = answers[i]?.trim();
-    if (!a || !lesson) return;
+    if (!a || !lesson || busy) return;
     setBusy(`ex${i}`);
     try {
-      const r = await checkFn({ data: { concept: active, exercise: lesson.exercises[i]!.prompt, answer: a } });
+      const r = await checkFn({ data: { concept: active, exercise: lesson.exercises[i]?.prompt ?? "", answer: a } });
       setResults((rs) => ({ ...rs, [i]: r }));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not check");
@@ -84,7 +85,7 @@ function Concepts() {
             placeholder="Any concept, e.g. Virtual memory"
             value={concept}
             onChange={(e) => setConcept(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && load()}
+            onKeyDown={(e) => { if (e.key === "Enter" && !busy) void load(); }}
           />
           {(["easy", "medium", "hard"] as const).map((d) => (
             <button

@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/profile")({
 
 function Profile() {
   const qc = useQueryClient();
-  const { data: p } = useQuery(profileQuery);
+  const { data: p, error: profileError, refetch } = useQuery(profileQuery);
   const [form, setForm] = useState({
     full_name: "",
     college: "",
@@ -48,10 +48,12 @@ function Profile() {
       });
   }, [p]);
 
+  if (profileError) return <p role="alert">Could not load your profile. <Button onClick={() => refetch()}>Retry</Button></p>;
   if (!p) return <p className="text-muted-foreground">Loading…</p>;
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    if (!p) return;
     setBusy(true);
     const { error } = await supabase
       .from("profiles")
@@ -65,7 +67,7 @@ function Profile() {
           .map((s) => s.trim())
           .filter(Boolean),
       })
-      .eq("id", p!.id);
+      .eq("id", p.id);
     setBusy(false);
     if (error) {
       toast.error(error.message);
@@ -76,6 +78,7 @@ function Profile() {
   }
 
   async function upload(file: File) {
+    if (!p) return;
     if (file.type !== "application/pdf") {
       toast.error("Please upload a PDF");
       return;
@@ -84,7 +87,7 @@ function Profile() {
       toast.error("Max 10 MB");
       return;
     }
-    const path = `${p!.id}/resume.pdf`;
+    const path = `${p.id}/resume-${crypto.randomUUID()}.pdf`;
     const { error } = await supabase.storage
       .from("resumes")
       .upload(path, file, { upsert: true, contentType: "application/pdf" });
@@ -92,13 +95,17 @@ function Profile() {
       toast.error(error.message);
       return;
     }
-    await supabase.from("profiles").update({ resume_path: path }).eq("id", p!.id);
+    const { error: saveError } = await supabase.from("profiles").update({ resume_path: path }).eq("id", p.id);
+    if (saveError) { toast.error("Resume uploaded but could not be linked. Please retry."); return; }
+    qc.invalidateQueries({ queryKey: ["resume_questions"] });
     toast.success("Resume uploaded");
     qc.invalidateQueries({ queryKey: ["profile"] });
   }
 
   async function viewResume() {
-    const { data } = await supabase.storage.from("resumes").createSignedUrl(p!.resume_path!, 60);
+    if (!p?.resume_path) return;
+    const { data, error } = await supabase.storage.from("resumes").createSignedUrl(p.resume_path, 60);
+    if (error) { toast.error("Could not open your resume. Please retry."); return; }
     if (data) window.open(data.signedUrl, "_blank");
   }
 

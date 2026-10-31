@@ -6,7 +6,8 @@ export const profileQuery = queryOptions({
   queryFn: async () => {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return null;
-    const { data } = await supabase.from("profiles").select("*").eq("id", u.user.id).maybeSingle();
+    const { data, error } = await supabase.from("profiles").select("*").eq("id", u.user.id).maybeSingle();
+    if (error) throw new Error(error.message);
     return data ? { ...data, email: u.user.email ?? "" } : null;
   },
 });
@@ -14,10 +15,11 @@ export const profileQuery = queryOptions({
 export const ratingsQuery = queryOptions({
   queryKey: ["ratings"],
   queryFn: async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("topic_ratings")
       .select("*")
       .order("rating", { ascending: false });
+    if (error) throw new Error(error.message);
     return data ?? [];
   },
 });
@@ -25,11 +27,12 @@ export const ratingsQuery = queryOptions({
 export const interviewsQuery = queryOptions({
   queryKey: ["interviews"],
   queryFn: async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("interviews")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(50);
+    if (error) throw new Error(error.message);
     return data ?? [];
   },
 });
@@ -37,7 +40,8 @@ export const interviewsQuery = queryOptions({
 export const categoriesQuery = queryOptions({
   queryKey: ["categories"],
   queryFn: async () => {
-    const { data } = await supabase.from("categories").select("*").order("sort_order");
+    const { data, error } = await supabase.from("categories").select("*").order("sort_order");
+    if (error) throw new Error(error.message);
     return data ?? [];
   },
 });
@@ -45,10 +49,11 @@ export const categoriesQuery = queryOptions({
 export const questionsQuery = queryOptions({
   queryKey: ["questions"],
   queryFn: async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("questions")
       .select("*, category:categories(*)")
       .order("created_at");
+    if (error) throw new Error(error.message);
     return data ?? [];
   },
 });

@@ -98,6 +98,30 @@ export type Database = {
         }
         Relationships: []
       }
+      coding_problems: {
+        Row: {
+          created_at: string
+          id: string
+          problem: Json
+          topic: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          problem: Json
+          topic: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          problem?: Json
+          topic?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       coding_submissions: {
         Row: {
           code: string
@@ -140,6 +164,7 @@ export type Database = {
           id: string
           interview_id: string
           question: string
+          rating_result: Json | null
           score: number | null
           user_id: string
         }
@@ -151,6 +176,7 @@ export type Database = {
           id?: string
           interview_id: string
           question: string
+          rating_result?: Json | null
           score?: number | null
           user_id?: string
         }
@@ -162,6 +188,7 @@ export type Database = {
           id?: string
           interview_id?: string
           question?: string
+          rating_result?: Json | null
           score?: number | null
           user_id?: string
         }
@@ -445,7 +472,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      append_interview_question: {
+        Args: { p_difficulty: string; p_id: string; p_question: string }
+        Returns: Json
+      }
+      complete_interview: { Args: { p_id: string }; Returns: Json }
+      replace_resume_questions: {
+        Args: { p_path: string; p_rows: Json }
+        Returns: number
+      }
+      save_coding_result: {
+        Args: {
+          p_code: string
+          p_language: string
+          p_problem: string
+          p_result: Json
+          p_user: string
+        }
+        Returns: undefined
+      }
+      save_interview_answer: {
+        Args: { p_answer: string; p_evaluation: Json; p_turn: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

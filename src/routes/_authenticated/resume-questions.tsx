@@ -12,10 +12,11 @@ import { profileQuery } from "@/lib/data";
 const resumeQuestionsQuery = queryOptions({
   queryKey: ["resume_questions"],
   queryFn: async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("resume_questions")
       .select("*")
       .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
     return data ?? [];
   },
 });
@@ -38,7 +39,7 @@ function ResumeQuestions() {
   const qc = useQueryClient();
   const gen = useServerFn(generateResumeQuestions);
   const { data: profile } = useQuery(profileQuery);
-  const { data: qs = [] } = useQuery(resumeQuestionsQuery);
+  const { data: qs = [], error, refetch } = useQuery(resumeQuestionsQuery);
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<string>("all");
 
@@ -99,6 +100,7 @@ function ResumeQuestions() {
           ))}
         </div>
       )}
+      {error && <p role="alert">Could not load resume questions. <Button onClick={() => refetch()}>Retry</Button></p>}
       <div className="space-y-3">
         {shown.map((q) => (
           <div key={q.id} className="card-surface p-4">

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtTime } from "@/lib/data";
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/sessions/$id")({
 function SessionDetail() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
-  const { data } = useQuery({
+  const { data, error, refetch } = useQuery({
     queryKey: ["session", id],
     queryFn: async () => {
       const [s, a] = await Promise.all([
@@ -37,6 +38,7 @@ function SessionDetail() {
           .eq("session_id", id)
           .order("created_at"),
       ]);
+      if (s.error || a.error) throw new Error("Could not load session feedback.");
       return { session: s.data, answers: a.data ?? [] };
     },
   });
@@ -44,6 +46,7 @@ function SessionDetail() {
   const [r, setR] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
 
+  if (error) return <p role="alert">Could not load this session. <Button onClick={() => refetch()}>Retry</Button></p>;
   if (!data) return <p className="text-muted-foreground">Loading…</p>;
   if (!data.session)
     return (
@@ -59,10 +62,11 @@ function SessionDetail() {
   const time = data.answers.reduce((s, a) => s + a.time_spent_seconds, 0);
 
   async function save(aid: string) {
-    await supabase
+    const { error } = await supabase
       .from("answers")
       .update({ self_rating: r, notes: notes || null })
       .eq("id", aid);
+    if (error) { toast.error("Could not save your notes. Please retry."); return; }
     setEdit(null);
     qc.invalidateQueries({ queryKey: ["session", id] });
   }
