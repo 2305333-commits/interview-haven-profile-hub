@@ -24,7 +24,9 @@ export function VideoAnswer({ disabled, onChange }: { disabled: boolean; onChang
     const video = preview.current; if (!video?.videoWidth) return;
     const canvas = document.createElement("canvas"); canvas.width = 640; canvas.height = Math.round(video.videoHeight * 640 / video.videoWidth);
     canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
-    if (frames.current.length < 3) frames.current.push(canvas.toDataURL("image/jpeg", 0.7));
+    const frame = canvas.toDataURL("image/jpeg", 0.7);
+    if (frames.current.length < 3) frames.current.push(frame);
+    else frames.current = [frames.current[0] ?? frame, frames.current[2] ?? frame, frame];
   }
   async function enable() {
     setError("");
@@ -68,7 +70,7 @@ export function VideoAnswer({ disabled, onChange }: { disabled: boolean; onChang
     <label className="flex items-start gap-2 text-xs text-muted-foreground"><Checkbox checked={consent} disabled={disabled || recording} onCheckedChange={(v) => setConsent(v === true)} /><span>I agree to send my recorded audio and sampled camera images for AI feedback when I submit. Raw recordings are not saved to my account.</span></label>
     <div className="flex flex-wrap items-center gap-2">
       {ready && !url && <Button onClick={() => recording ? recorder.current?.stop() : record()} variant={recording ? "destructive" : "secondary"} disabled={disabled || processing || !consent}>{recording ? <Square /> : <Mic />}{recording ? "Stop recording" : "Record answer"}</Button>}
-      {url && <Button variant="outline" disabled={disabled || processing} onClick={() => { setUrl(null); setEvidence(null); setError(""); }}><RotateCcw />Retry recording</Button>}
+      {url && <Button variant="outline" disabled={disabled || processing || recording} onClick={() => { setUrl(null); setEvidence(null); setError(""); }}><RotateCcw />Retry recording</Button>}
       <span role="status" className="font-mono text-xs text-muted-foreground">{processing ? "Preparing recording…" : recording ? `Recording · ${seconds}s / 120s` : evidence ? "Recording ready" : ""}</span>
     </div>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

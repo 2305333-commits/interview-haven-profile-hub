@@ -97,7 +97,7 @@ export async function transcribeAudio(base64: string, mime: string): Promise<str
   form.append(
     "file",
     new Blob([bytes], { type }),
-    type.includes("wav") ? "answer.wav" : "answer.webm",
+    type.includes("wav") ? "answer.wav" : type.includes("mp4") ? "answer.m4a" : "answer.webm",
   );
   form.append("response_format", "json");
   const res = await fetch(`${GATEWAY}/v1/audio/transcriptions`, {

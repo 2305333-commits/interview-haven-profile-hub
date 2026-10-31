@@ -204,6 +204,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
     try {
       window.speechSynthesis?.cancel();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!mountedRef.current) { stream.getTracks().forEach((track) => track.stop()); return; }
       let rec: MediaRecorder;
       try {
         const supported = ["audio/webm", "audio/mp4"].find((type) => MediaRecorder.isTypeSupported(type));
