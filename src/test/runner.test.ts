@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { sameValue } from "@/lib/runner.server";
+import { sameValue, judgeStatus } from "@/lib/runner.server";
 describe("runner output comparison", () => {
+  it("does not label failed tests as accepted", () => expect(judgeStatus("Accepted", 0, 6)).toBe("Wrong Answer"));
+  it("accepts successful tests", () => expect(judgeStatus("Accepted", 6, 6)).toBe("Accepted"));
+  it("preserves compiler failures", () => expect(judgeStatus("Compilation Error", 0, 6)).toBe("Compilation Error"));
   it("preserves whitespace inside strings", () => expect(sameValue('"a b"', '"ab"')).toBe(false));
   it("preserves literal boolean words in strings", () => expect(sameValue('"True"', '"true"')).toBe(false));
   it("preserves apostrophes", () => expect(sameValue(JSON.stringify("it's"), JSON.stringify('it"s'))).toBe(false));

@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { generateStructured, generateEvaluation, transcribeAudio } from "./ai.server";
-import { runCode, sameValue } from "./runner.server";
+import { runCode, sameValue, judgeStatus } from "./runner.server";
 import { levelFromManual, stepLevel } from "./levels";
 import { deliveryPrompt, summarizeDelivery, voiceRecordingSchema, type VoiceDelivery } from "./voice-delivery";
 import { questionRules, resumeFacts, spokenEvaluationRules } from "./interview-rules";
@@ -410,7 +410,7 @@ export const judgeCode = createServerFn({ method: "POST" })
       tests: testResults,
       compiles,
       score: Math.round((passedCount / Math.max(1, tests.length)) * 80) / 10 + (passedCount === tests.length ? 2 : 0),
-      status: run.status,
+      status: judgeStatus(run.status, passedCount, tests.length),
       error: errorText,
       timeSec: run.timeSec,
       memoryKb: run.memoryKb,

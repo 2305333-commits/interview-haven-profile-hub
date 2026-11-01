@@ -15,6 +15,10 @@ export type RunOutput = {
   memoryKb: number | null;
 };
 
+export function judgeStatus(status: string, passed: number, total: number) {
+  return status === "Accepted" && passed < total ? "Wrong Answer" : status;
+}
+
 export async function runCode(language: keyof typeof COMPILER, source: string): Promise<RunOutput> {
   const res = await fetch("https://wandbox.org/api/compile.json", {
     method: "POST",

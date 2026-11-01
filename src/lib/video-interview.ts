@@ -7,8 +7,8 @@ export const videoEvidenceSchema = z.object({
   consent: z.literal(true),
 });
 export type VideoEvidence = z.infer<typeof videoEvidenceSchema>;
-const assessment = z.object({ score: z.number().nullable(), feedback: z.string() });
-const criterion = z.number().nullable();
+const assessment = z.object({ score: z.number().min(0).max(10).nullable(), feedback: z.string() });
+const criterion = z.number().min(0).max(10).nullable();
 /** Visible-outfit checks only; never body, brand, price, or looks. */
 export const outfitSchema = z.object({ formality: criterion, neatness: criterion, fit: criterion, colors: criterion, framing: criterion, tips: z.array(z.string()).max(4) });
 export type OutfitBreakdown = z.infer<typeof outfitSchema>;
@@ -17,7 +17,7 @@ export const OUTFIT_WEIGHTS = { formality: 0.4, neatness: 0.25, fit: 0.2, colors
 export function outfitScore(o: OutfitBreakdown) {
   const keys = Object.keys(OUTFIT_WEIGHTS) as (keyof typeof OUTFIT_WEIGHTS)[];
   if (keys.some((k) => o[k] === null)) return null;
-  return Math.round(keys.reduce((sum, k) => sum + Math.max(0, Math.min(10, o[k]!)) * OUTFIT_WEIGHTS[k], 0) * 10) / 10;
+  return Math.round(keys.reduce((sum, k) => sum + Math.max(0, Math.min(10, o[k] ?? 0)) * OUTFIT_WEIGHTS[k], 0) * 10) / 10;
 }
 export const videoFeedbackSchema = z.object({ audio: assessment, presentation: assessment, outfit: outfitSchema.optional() });
 export type VideoFeedback = z.infer<typeof videoFeedbackSchema> & { overall: number | null; setting: VideoEvidence["setting"] };
