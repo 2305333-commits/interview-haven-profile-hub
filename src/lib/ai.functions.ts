@@ -39,18 +39,75 @@ export const generateQuiz = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const options = data.difficulty === "easy" ? 3 : 4;
     const out = await generateStructured(
       quizSchema,
       "You write accurate multiple-choice quiz questions. Never repeat a question. Exactly one option is correct.",
       `Write ${data.count} ${data.difficulty} multiple-choice questions about "${data.topic}". Each has exactly ${options} options, correctIndex is the 0-based index of the right option, and a one-sentence explanation.`,
     );
-    return out.questions
+    const questions = out.questions
       .filter(
         (q) => q.options.length >= 2 && q.correctIndex >= 0 && q.correctIndex < q.options.length,
       )
       .slice(0, data.count);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: attempt, error } = await supabaseAdmin
+      .from("quiz_attempts")
+      .insert({
+        user_id: context.userId,
+        topic: data.topic,
+        difficulty: data.difficulty,
+        questions: JSON.parse(JSON.stringify(questions)),
+      })
+      .select("id")
+      .single();
+    if (error || !attempt) throw new Error("Could not start the quiz. Please try again.");
+    return {
+      attemptId: attempt.id as string,
+      questions: questions.map((q) => ({ question: q.question, options: q.options })),
+    };
+  });
+
+export const submitQuiz = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        attemptId: z.string().uuid(),
+        answers: z.array(z.number().int().min(-1).max(10)).max(50),
+        seconds: z.number().int().min(0).max(86400),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: claimed, error } = await supabaseAdmin
+      .from("quiz_attempts")
+      .update({ used: true })
+      .eq("id", data.attemptId)
+      .eq("user_id", context.userId)
+      .eq("used", false)
+      .select("*")
+      .maybeSingle();
+    if (error || !claimed) throw new Error("This quiz was already submitted or has expired.");
+    const qs = claimed.questions as unknown as z.infer<typeof quizSchema>["questions"];
+    const score = qs.reduce((a, q, k) => a + (data.answers[k] === q.correctIndex ? 1 : 0), 0);
+    const elapsed = Math.floor((Date.now() - new Date(claimed.created_at).getTime()) / 1000);
+    const { error: insErr } = await supabaseAdmin.from("quiz_results").insert({
+      user_id: context.userId,
+      topic: claimed.topic,
+      difficulty: claimed.difficulty,
+      score,
+      total_questions: qs.length,
+      question_count: qs.length,
+      time_spent_seconds: Math.min(data.seconds, Math.max(0, elapsed)),
+    });
+    if (insErr) {
+      await supabaseAdmin.from("quiz_attempts").update({ used: false }).eq("id", claimed.id);
+      throw new Error("Could not save your quiz. Press Finish to retry.");
+    }
+    return { score, questions: qs };
   });
 
 /* ---------------- Adaptive interviews ---------------- */
@@ -272,7 +329,10 @@ Evaluate technical correctness, completeness, communication clarity, confidence,
         ? { videoFeedback: combineVideoFeedback(videoAssessment, score, data.video.setting) }
         : {}),
     };
-    const { data: saved, error: saveError } = await supabase.rpc("save_interview_answer", {
+    // Scores are written only by the server so users cannot set their own grades.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: saved, error: saveError } = await supabaseAdmin.rpc("record_interview_answer", {
+      p_user: userId,
       p_turn: turn.id,
       p_answer: data.answer,
       p_evaluation: JSON.parse(JSON.stringify(evaluation)),
