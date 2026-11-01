@@ -26,7 +26,10 @@ function Sessions() {
   const sessionsResult = useQuery({
     queryKey: ["sessions"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("sessions").select("*, category:categories(name), answers(count)").order("started_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("sessions")
+        .select("*, category:categories(name), answers(count)")
+        .order("started_at", { ascending: false });
       if (error) throw new Error(error.message);
       return data ?? [];
     },
@@ -38,19 +41,38 @@ function Sessions() {
   async function del(id: string) {
     if (!confirm("Delete this session?")) return;
     const { error } = await supabase.from("sessions").delete().eq("id", id);
-    if (error) { toast.error("Could not delete the session. Please retry."); return; }
+    if (error) {
+      toast.error("Could not delete the session. Please retry.");
+      return;
+    }
     qc.invalidateQueries({ queryKey: ["sessions"] });
   }
 
   return (
     <>
       <PageHeader eyebrow="History" title="Your sessions" />
-      {(sessionsResult.error || interviewsResult.error) && <p role="alert">Could not load history. <Button onClick={() => { sessionsResult.refetch(); interviewsResult.refetch(); }}>Retry</Button></p>}
+      {(sessionsResult.error || interviewsResult.error) && (
+        <p role="alert">
+          Could not load history.{" "}
+          <Button
+            onClick={() => {
+              sessionsResult.refetch();
+              interviewsResult.refetch();
+            }}
+          >
+            Retry
+          </Button>
+        </p>
+      )}
       <h2 className="mb-3 text-xl font-bold">AI interviews & written practice</h2>
       <div className="card-surface mb-10 divide-y">
         {interviews.map((i) => (
           <div key={i.id} className="flex justify-between p-4 text-sm">
-            <Link to="/interviews/$id" params={{ id: i.id }} className="min-w-0 flex-1 hover:text-primary">
+            <Link
+              to="/interviews/$id"
+              params={{ id: i.id }}
+              className="min-w-0 flex-1 hover:text-primary"
+            >
               {i.topic}{" "}
               <span className="text-muted-foreground">
                 · {i.mode} · {new Date(i.created_at).toLocaleDateString()}

@@ -13,9 +13,15 @@ export const Route = createFileRoute("/_authenticated/discuss")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { title: "AI Discussion — InterviewVerse" },
-      { name: "description", content: "Talk through any concept, doubt or interview question with an AI mentor." },
+      {
+        name: "description",
+        content: "Talk through any concept, doubt or interview question with an AI mentor.",
+      },
       { property: "og:title", content: "AI Discussion — InterviewVerse" },
-      { property: "og:description", content: "Talk through any concept, doubt or interview question with an AI mentor." },
+      {
+        property: "og:description",
+        content: "Talk through any concept, doubt or interview question with an AI mentor.",
+      },
     ],
   }),
   component: Discuss,
@@ -70,7 +76,11 @@ function Discuss() {
               <p className="text-muted-foreground">Ask about anything you're studying. Try:</p>
               <div className="flex flex-wrap justify-center gap-2">
                 {STARTERS.map((s) => (
-                  <button key={s} onClick={() => submit(s)} className="rounded-full border px-3 py-1 text-sm hover:bg-muted">
+                  <button
+                    key={s}
+                    onClick={() => submit(s)}
+                    className="rounded-full border px-3 py-1 text-sm hover:bg-muted"
+                  >
                     {s}
                   </button>
                 ))}

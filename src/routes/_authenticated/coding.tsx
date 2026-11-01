@@ -137,8 +137,8 @@ function Coding() {
               ))}
             </ul>
             <p className="text-xs text-muted-foreground">
-              Write the whole program or only the function — both work. {problem.testCount}{" "}
-              hidden tests.
+              Write the whole program or only the function — both work. {problem.testCount} hidden
+              tests.
             </p>
           </div>
           <div className="space-y-3">

@@ -58,7 +58,11 @@ function Quiz() {
     useQuery({
       queryKey: ["quiz_results"],
       queryFn: async () => {
-        const { data, error } = await supabase.from("quiz_results").select("*").order("created_at", { ascending: false }).limit(20);
+        const { data, error } = await supabase
+          .from("quiz_results")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(20);
         if (error) throw new Error(error.message);
         return data ?? [];
       },
@@ -102,7 +106,10 @@ function Quiz() {
       question_count: count,
     });
     setBusy(false);
-    if (error) { toast.error("Could not save your quiz. Your answers are kept; press Finish to retry."); return; }
+    if (error) {
+      toast.error("Could not save your quiz. Your answers are kept; press Finish to retry.");
+      return;
+    }
     setDone(true);
     qc.invalidateQueries({ queryKey: ["quiz_results"] });
   }
@@ -141,7 +148,9 @@ function Quiz() {
             {i < qs.length - 1 ? (
               <Button onClick={() => setI(i + 1)}>Next</Button>
             ) : (
-              <Button onClick={complete} disabled={busy}>{busy ? "Saving…" : "Finish"}</Button>
+              <Button onClick={complete} disabled={busy}>
+                {busy ? "Saving…" : "Finish"}
+              </Button>
             )}
           </div>
         </div>

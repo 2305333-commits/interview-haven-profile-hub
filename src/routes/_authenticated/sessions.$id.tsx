@@ -46,7 +46,12 @@ function SessionDetail() {
   const [r, setR] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
 
-  if (error) return <p role="alert">Could not load this session. <Button onClick={() => refetch()}>Retry</Button></p>;
+  if (error)
+    return (
+      <p role="alert">
+        Could not load this session. <Button onClick={() => refetch()}>Retry</Button>
+      </p>
+    );
   if (!data) return <p className="text-muted-foreground">Loading…</p>;
   if (!data.session)
     return (
@@ -66,7 +71,10 @@ function SessionDetail() {
       .from("answers")
       .update({ self_rating: r, notes: notes || null })
       .eq("id", aid);
-    if (error) { toast.error("Could not save your notes. Please retry."); return; }
+    if (error) {
+      toast.error("Could not save your notes. Please retry.");
+      return;
+    }
     setEdit(null);
     qc.invalidateQueries({ queryKey: ["session", id] });
   }

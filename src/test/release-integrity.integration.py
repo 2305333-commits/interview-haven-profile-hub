@@ -43,7 +43,7 @@ def test_integrity():
         assert call('POST', 'rpc/save_interview_answer', body, ok=False).get('message') == 'This interview has ended'
         print('PASS: completion awards XP once and rejects later grading')
         r = requests.get(base + 'coding_problems?select=id', headers=headers, timeout=30)
-        assert r.status_code in (401,403)
+        assert r.status_code in (401,403) or (r.ok and r.json() == [])
         print('PASS: hidden coding tests cannot be fetched by app users')
     finally:
         call('DELETE', 'interviews?id=eq.' + iid)

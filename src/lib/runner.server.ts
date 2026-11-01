@@ -63,12 +63,28 @@ export async function runCode(language: keyof typeof COMPILER, source: string): 
 export function sameValue(a: string, b: string) {
   const equal = (x: unknown, y: unknown): boolean => {
     if (x === y) return true;
-    if (Array.isArray(x) && Array.isArray(y)) return x.length === y.length && x.every((v, i) => equal(v, y[i]));
-    if (x && y && typeof x === "object" && typeof y === "object" && !Array.isArray(x) && !Array.isArray(y)) {
-      const left = x as Record<string, unknown>, right = y as Record<string, unknown>;
-      return Object.keys(left).length === Object.keys(right).length && Object.keys(left).every((k) => Object.hasOwn(right, k) && equal(left[k], right[k]));
+    if (Array.isArray(x) && Array.isArray(y))
+      return x.length === y.length && x.every((v, i) => equal(v, y[i]));
+    if (
+      x &&
+      y &&
+      typeof x === "object" &&
+      typeof y === "object" &&
+      !Array.isArray(x) &&
+      !Array.isArray(y)
+    ) {
+      const left = x as Record<string, unknown>,
+        right = y as Record<string, unknown>;
+      return (
+        Object.keys(left).length === Object.keys(right).length &&
+        Object.keys(left).every((k) => Object.hasOwn(right, k) && equal(left[k], right[k]))
+      );
     }
     return false;
   };
-  try { return equal(JSON.parse(a), JSON.parse(b)); } catch { return false; }
+  try {
+    return equal(JSON.parse(a), JSON.parse(b));
+  } catch {
+    return false;
+  }
 }

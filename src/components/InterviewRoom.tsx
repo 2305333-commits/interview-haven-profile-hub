@@ -147,9 +147,21 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
     try {
       const answeredCount = turns.length;
       const wantNext = answeredCount < count;
-      const submittedAnswer = mode === "video" && videoEvidence ? (await stt({ data: { audio: videoEvidence.audio, mime: "audio/wav" } })).text : answer;
-      if (!submittedAnswer.trim()) throw new Error("No speech was detected. Please retry the recording.");
-      const res = await submit({ data: { turnId: current.id, answer: submittedAnswer, wantNext, ...(mode === "voice" ? { recordings } : {}), ...(mode === "video" && videoEvidence ? { video: videoEvidence } : {}) } });
+      const submittedAnswer =
+        mode === "video" && videoEvidence
+          ? (await stt({ data: { audio: videoEvidence.audio, mime: "audio/wav" } })).text
+          : answer;
+      if (!submittedAnswer.trim())
+        throw new Error("No speech was detected. Please retry the recording.");
+      const res = await submit({
+        data: {
+          turnId: current.id,
+          answer: submittedAnswer,
+          wantNext,
+          ...(mode === "voice" ? { recordings } : {}),
+          ...(mode === "video" && videoEvidence ? { video: videoEvidence } : {}),
+        },
+      });
       setTurns((ts) => {
         const copy = [...ts];
         copy[copy.length - 1] = {
@@ -176,7 +188,8 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
   }
 
   async function continueInterview(turnId: string) {
-    setPreparingNext(true); setNextFailed(false);
+    setPreparingNext(true);
+    setNextFailed(false);
     try {
       const next = await getNext({ data: { turnId } });
       if (!mountedRef.current) return;
@@ -185,7 +198,9 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
     } catch (error) {
       setNextFailed(true);
       toast.error(error instanceof Error ? error.message : "Could not prepare the next question.");
-    } finally { setPreparingNext(false); }
+    } finally {
+      setPreparingNext(false);
+    }
   }
 
   async function end() {
@@ -204,10 +219,15 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
     try {
       window.speechSynthesis?.cancel();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (!mountedRef.current) { stream.getTracks().forEach((track) => track.stop()); return; }
+      if (!mountedRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       let rec: MediaRecorder;
       try {
-        const supported = ["audio/webm", "audio/mp4"].find((type) => MediaRecorder.isTypeSupported(type));
+        const supported = ["audio/webm", "audio/mp4"].find((type) =>
+          MediaRecorder.isTypeSupported(type),
+        );
         rec = new MediaRecorder(stream, supported ? { mimeType: supported } : undefined);
       } catch (error) {
         stream.getTracks().forEach((track) => track.stop());
@@ -230,7 +250,9 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
           if (mode === "voice" && timing && text.trim()) {
             setRecordings((rs) => [...rs, { timing, transcript: text }]);
           } else if (mode === "voice") {
-            toast.info("Audio delivery measurements were unavailable for this recording; feedback will use the transcript.");
+            toast.info(
+              "Audio delivery measurements were unavailable for this recording; feedback will use the transcript.",
+            );
           }
         } catch (e) {
           toast.error(e instanceof Error ? e.message : "Transcription failed");
@@ -272,7 +294,8 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
         </div>
         {category === "resume" ? (
           <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            Fresh questions will be written using your resume topics and profile. Refresh your resume topics on the Resume Questions page.
+            Fresh questions will be written using your resume topics and profile. Refresh your
+            resume topics on the Resume Questions page.
           </p>
         ) : needsContext ? (
           <div>
@@ -401,22 +424,28 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
         </div>
       ) : current && !current.answer ? (
         <div className="card-surface space-y-3 p-4">
-          {mode === "video" ? <VideoAnswer key={current.id} disabled={busy} onChange={setVideoEvidence} /> : <Textarea
-            disabled={busy || recording}
-            rows={5}
-            placeholder={
-              mode === "voice"
-                ? "Tap the mic and answer out loud…"
-                : mode === "written"
-                  ? "Write a complete, structured answer…"
-                  : "Type your answer…"
-            }
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-          />}
+          {mode === "video" ? (
+            <VideoAnswer key={current.id} disabled={busy} onChange={setVideoEvidence} />
+          ) : (
+            <Textarea
+              disabled={busy || recording}
+              rows={5}
+              placeholder={
+                mode === "voice"
+                  ? "Tap the mic and answer out loud…"
+                  : mode === "written"
+                    ? "Write a complete, structured answer…"
+                    : "Type your answer…"
+              }
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+            />
+          )}
           {mode === "voice" && recordingDelivery && (
             <p className="text-xs text-muted-foreground" role="status">
-              Recorded delivery · {recordingDelivery.wordsPerMinute} words/min · {recordingDelivery.pauseCount} pauses · {recordingDelivery.fillerCount} possible fillers
+              Recorded delivery · {recordingDelivery.wordsPerMinute} words/min ·{" "}
+              {recordingDelivery.pauseCount} pauses · {recordingDelivery.fillerCount} possible
+              fillers
             </p>
           )}
           <div className="flex flex-wrap justify-between gap-2">
@@ -426,32 +455,46 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
                   ⏱ {fmtTime(elapsed)}
                 </span>
               ) : (
-              <Button
-                variant={recording ? "destructive" : "secondary"}
-                onClick={toggleRecord}
-                disabled={busy && !recording}
-              >
-                {recording ? (
-                  <>
-                    <Square className="mr-1 h-4 w-4" /> Stop
-                  </>
-                ) : (
-                  <>
-                    <Mic className="mr-1 h-4 w-4" /> {mode === "voice" ? "Answer" : "Dictate"}
-                  </>
-                )}
-              </Button>
+                <Button
+                  variant={recording ? "destructive" : "secondary"}
+                  onClick={toggleRecord}
+                  disabled={busy && !recording}
+                >
+                  {recording ? (
+                    <>
+                      <Square className="mr-1 h-4 w-4" /> Stop
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="mr-1 h-4 w-4" /> {mode === "voice" ? "Answer" : "Dictate"}
+                    </>
+                  )}
+                </Button>
               )}
               <Button variant="ghost" onClick={end} disabled={busy || recording}>
                 End interview
               </Button>
             </div>
-            <Button onClick={send} disabled={busy || recording || (mode === "video" ? !videoEvidence : !answer.trim())}>
+            <Button
+              onClick={send}
+              disabled={busy || recording || (mode === "video" ? !videoEvidence : !answer.trim())}
+            >
               {busy ? "Evaluating…" : "Submit answer"}
             </Button>
           </div>
         </div>
-      ) : preparingNext ? <p role="status" className="text-sm text-muted-foreground">Preparing your next question…</p> : nextFailed && current ? <div className="flex gap-2"><Button onClick={() => continueInterview(current.id)}>Retry next question</Button><Button variant="ghost" onClick={end}>End interview</Button></div> : null}
+      ) : preparingNext ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          Preparing your next question…
+        </p>
+      ) : nextFailed && current ? (
+        <div className="flex gap-2">
+          <Button onClick={() => continueInterview(current.id)}>Retry next question</Button>
+          <Button variant="ghost" onClick={end}>
+            End interview
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -490,27 +533,116 @@ export function EvaluationCard({
         )}
       </div>
       <p className="mt-2 text-sm">{ev.feedback}</p>
-      {ev.videoFeedback && <section className="mt-4 space-y-3 border-t pt-3" aria-label="Video feedback">
-        <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">Video interview feedback</h3><span className="font-mono text-sm">Overall practice · {ev.videoFeedback.overall === null ? "Unavailable" : `${ev.videoFeedback.overall.toFixed(1)}/10`}</span></div>
-        <p className="text-xs text-muted-foreground">Answer quality: {ev.score.toFixed(1)}/10 · Only answer quality updates your skill rating.</p>
-        {([["Audible delivery", ev.videoFeedback.audio], [ev.videoFeedback.outfit ? "Outfit score" : "Interview presentation", ev.videoFeedback.presentation]] as const).map(([label, part]) => <div key={label}><p className="text-sm font-semibold">{label} <span className="font-mono text-primary">{part.score === null ? "Not assessable" : `${part.score.toFixed(1)}/10`}</span></p><p className="mt-1 text-sm text-muted-foreground">{part.feedback}</p></div>)}
-        {ev.videoFeedback.outfit && (() => { const o = ev.videoFeedback.outfit; return <div className="rounded-md border p-3">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">{([["Formality", o.formality], ["Neatness", o.neatness], ["Fit", o.fit], ["Colors", o.colors], ["Camera framing", o.framing]] as const).map(([k, v]) => <div key={k}><p className="text-xs text-muted-foreground">{k}</p><p className="font-mono text-sm">{v === null ? "—" : `${v.toFixed(1)}`}</p><div className="mt-1 h-1.5 rounded bg-muted"><div className="h-1.5 rounded bg-primary" style={{ width: `${(v ?? 0) * 10}%` }} /></div></div>)}</div>
-          {o.tips.length > 0 && <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">{o.tips.map((t) => <li key={t}>{t}</li>)}</ul>}
-          <p className="mt-2 text-xs text-muted-foreground">Outfit score weights formality 40%, neatness 25%, fit 20%, colors 15%. Framing is advice only.</p>
-        </div>; })()}
-        <p className="text-xs text-muted-foreground">Presentation setting: {ev.videoFeedback.setting}. AI coaching estimates—not personality, emotion, or hiring predictions.</p>
-      </section>}
+      {ev.videoFeedback && (
+        <section className="mt-4 space-y-3 border-t pt-3" aria-label="Video feedback">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">Video interview feedback</h3>
+            <span className="font-mono text-sm">
+              Overall practice ·{" "}
+              {ev.videoFeedback.overall === null
+                ? "Unavailable"
+                : `${ev.videoFeedback.overall.toFixed(1)}/10`}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Answer quality: {ev.score.toFixed(1)}/10 · Only answer quality updates your skill
+            rating.
+          </p>
+          {(
+            [
+              ["Audible delivery", ev.videoFeedback.audio],
+              [
+                ev.videoFeedback.outfit ? "Outfit score" : "Interview presentation",
+                ev.videoFeedback.presentation,
+              ],
+            ] as const
+          ).map(([label, part]) => (
+            <div key={label}>
+              <p className="text-sm font-semibold">
+                {label}{" "}
+                <span className="font-mono text-primary">
+                  {part.score === null ? "Not assessable" : `${part.score.toFixed(1)}/10`}
+                </span>
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">{part.feedback}</p>
+            </div>
+          ))}
+          {ev.videoFeedback.outfit &&
+            (() => {
+              const o = ev.videoFeedback.outfit;
+              return (
+                <div className="rounded-md border p-3">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                    {(
+                      [
+                        ["Formality", o.formality],
+                        ["Neatness", o.neatness],
+                        ["Fit", o.fit],
+                        ["Colors", o.colors],
+                        ["Camera framing", o.framing],
+                      ] as const
+                    ).map(([k, v]) => (
+                      <div key={k}>
+                        <p className="text-xs text-muted-foreground">{k}</p>
+                        <p className="font-mono text-sm">{v === null ? "—" : `${v.toFixed(1)}`}</p>
+                        <div className="mt-1 h-1.5 rounded bg-muted">
+                          <div
+                            className="h-1.5 rounded bg-primary"
+                            style={{ width: `${(v ?? 0) * 10}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {o.tips.length > 0 && (
+                    <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                      {o.tips.map((t) => (
+                        <li key={t}>{t}</li>
+                      ))}
+                    </ul>
+                  )}
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Outfit score weights formality 40%, neatness 25%, fit 20%, colors 15%. Framing
+                    is advice only.
+                  </p>
+                </div>
+              );
+            })()}
+          <p className="text-xs text-muted-foreground">
+            Presentation setting: {ev.videoFeedback.setting}. AI coaching estimates—not personality,
+            emotion, or hiring predictions.
+          </p>
+        </section>
+      )}
       {ev.voiceDelivery && (
         <section className="mt-4 border-t pt-3" aria-label="Voice delivery">
           <h3 className="text-sm font-semibold">Voice delivery</h3>
           <dl className="mt-2 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-            <div><dt className="text-xs text-muted-foreground">Pace</dt><dd className="font-mono">{ev.voiceDelivery.wordsPerMinute} words/min</dd></div>
-            <div><dt className="text-xs text-muted-foreground">Internal pauses</dt><dd className="font-mono">{ev.voiceDelivery.pauseCount} · {ev.voiceDelivery.pauseSeconds.toFixed(1)}s total</dd></div>
-            <div><dt className="text-xs text-muted-foreground">Longest pause</dt><dd className="font-mono">{ev.voiceDelivery.longestPauseSeconds.toFixed(1)}s</dd></div>
-            <div><dt className="text-xs text-muted-foreground">Possible fillers</dt><dd className="font-mono">{ev.voiceDelivery.fillerCount} · {ev.voiceDelivery.fillersPer100Words}/100 words</dd></div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Pace</dt>
+              <dd className="font-mono">{ev.voiceDelivery.wordsPerMinute} words/min</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Internal pauses</dt>
+              <dd className="font-mono">
+                {ev.voiceDelivery.pauseCount} · {ev.voiceDelivery.pauseSeconds.toFixed(1)}s total
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Longest pause</dt>
+              <dd className="font-mono">{ev.voiceDelivery.longestPauseSeconds.toFixed(1)}s</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Possible fillers</dt>
+              <dd className="font-mono">
+                {ev.voiceDelivery.fillerCount} · {ev.voiceDelivery.fillersPer100Words}/100 words
+              </dd>
+            </div>
           </dl>
-          <p className="mt-2 text-xs text-muted-foreground">Estimates from the original recording. Noise and transcription can affect results; vocal tone and emotion are not measured.</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Estimates from the original recording. Noise and transcription can affect results; vocal
+            tone and emotion are not measured.
+          </p>
         </section>
       )}
       <div className="mt-3 grid grid-cols-5 gap-2">
