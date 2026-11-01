@@ -4,7 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/AppShell";
 
-type OAuthResult = { data: any; error: { message: string } | null };
+type OAuthResult = {
+  data: {
+    client?: { name?: string };
+    scope?: string;
+    redirect_url?: string;
+    redirect_to?: string;
+    redirect_uri?: string;
+  } | null;
+  error: { message: string } | null;
+};
 type OAuthApi = {
   getAuthorizationDetails: (id: string) => Promise<OAuthResult>;
   approveAuthorization: (id: string) => Promise<OAuthResult>;
