@@ -15,6 +15,13 @@
       "when": 1793469085319,
       "tag": "0001_atomic_coding_save",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793552658309,
+      "tag": "0002_server_derived_scores",
+      "breakpoints": true
     }
   ]
 }
