@@ -8,9 +8,15 @@ export const Route = createFileRoute("/_authenticated/practice")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { title: "Written Practice — InterviewVerse" },
-      { name: "description", content: "Written answers to fresh AI-written questions with scored feedback." },
+      {
+        name: "description",
+        content: "Written answers to fresh AI-written questions with scored feedback.",
+      },
       { property: "og:title", content: "Written Practice — InterviewVerse" },
-      { property: "og:description", content: "Written answers to fresh AI-written questions with scored feedback." },
+      {
+        property: "og:description",
+        content: "Written answers to fresh AI-written questions with scored feedback.",
+      },
     ],
   }),
   component: () => (

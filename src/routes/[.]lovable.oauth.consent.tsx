@@ -4,7 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/AppShell";
 
-type OAuthResult = { data: any; error: { message: string } | null };
+type OAuthResult = {
+  data: {
+    client?: { name?: string };
+    scope?: string;
+    redirect_url?: string;
+    redirect_to?: string;
+    redirect_uri?: string;
+  } | null;
+  error: { message: string } | null;
+};
 type OAuthApi = {
   getAuthorizationDetails: (id: string) => Promise<OAuthResult>;
   approveAuthorization: (id: string) => Promise<OAuthResult>;
@@ -14,14 +23,33 @@ const oauth = () => (supabase.auth as unknown as { oauth: OAuthApi }).oauth;
 
 export const Route = createFileRoute("/.lovable/oauth/consent")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Connect an app — InterviewVerse" }, { name: "description", content: "Approve or decline an assistant connection to your own InterviewVerse history and skill ratings." }, { property: "og:title", content: "Connect an app — InterviewVerse" }, { property: "og:description", content: "Manage assistant access to your own interview practice data." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [
+      { title: "Connect an app — InterviewVerse" },
+      {
+        name: "description",
+        content:
+          "Approve or decline an assistant connection to your own InterviewVerse history and skill ratings.",
+      },
+      { property: "og:title", content: "Connect an app — InterviewVerse" },
+      {
+        property: "og:description",
+        content: "Manage assistant access to your own interview practice data.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   validateSearch: (s: Record<string, unknown>) => ({
-    authorization_id: typeof s['authorization_id'] === "string" ? s['authorization_id'] : "",
+    authorization_id: typeof s["authorization_id"] === "string" ? s["authorization_id"] : "",
   }),
   beforeLoad: async ({ search, location }) => {
-    if (!search.authorization_id) throw new Error("This connection link is missing its authorization ID.");
+    if (!search.authorization_id)
+      throw new Error("This connection link is missing its authorization ID.");
     const { data } = await supabase.auth.getSession();
-    if (!data.session) throw redirect({ to: "/auth", search: { next: location.pathname + location.searchStr } });
+    if (!data.session)
+      throw redirect({ to: "/auth", search: { next: location.pathname + location.searchStr } });
     return { email: data.session.user.email ?? "" };
   },
   loader: async ({ location }) => {
@@ -37,7 +65,9 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
   errorComponent: ({ error }) => (
     <Shell>
       <h1 className="text-2xl font-bold">Couldn't load this connection request</h1>
-      <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : String(error)}</p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        {error instanceof Error ? error.message : String(error)}
+      </p>
     </Shell>
   ),
 });
@@ -60,19 +90,33 @@ function Consent() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const client = details?.client?.name ?? "An app";
-  const scopes = String(details?.scope ?? "").split(/\s+/).filter(Boolean);
+  const scopes = String(details?.scope ?? "")
+    .split(/\s+/)
+    .filter(Boolean);
   const label = (s: string) =>
-    s === "email" ? "Share your email address" : s === "profile" ? "Share your basic profile" : s === "openid" ? "Confirm who you are" : `Additional permission requested: ${s}`;
+    s === "email"
+      ? "Share your email address"
+      : s === "profile"
+        ? "Share your basic profile"
+        : s === "openid"
+          ? "Confirm who you are"
+          : `Additional permission requested: ${s}`;
 
   async function decide(approve: boolean) {
     setBusy(true);
     setError(null);
     try {
-      const { data, error } = approve ? await oauth().approveAuthorization(authorization_id) : await oauth().denyAuthorization(authorization_id);
+      const { data, error } = approve
+        ? await oauth().approveAuthorization(authorization_id)
+        : await oauth().denyAuthorization(authorization_id);
       const target = data?.redirect_url ?? data?.redirect_to;
-      if (error || !target) throw new Error(error?.message ?? "No redirect was returned. Please try again.");
+      if (error || !target)
+        throw new Error(error?.message ?? "No redirect was returned. Please try again.");
       window.location.href = target;
-    } catch (e) { setError(e instanceof Error ? e.message : "Connection failed. Please retry."); setBusy(false); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Connection failed. Please retry.");
+      setBusy(false);
+    }
   }
 
   return (
@@ -81,16 +125,36 @@ function Consent() {
       <p className="mt-2 text-sm text-muted-foreground">
         {client} will be able to read your skill ratings and interview history while acting as you.
       </p>
-      <p className="mt-4 text-sm">Signed in as <span className="font-medium">{email}</span></p>
-      {details?.redirect_uri && <p className="mt-1 break-all text-xs text-muted-foreground">Returns to {details.redirect_uri}</p>}
-      {scopes.length > 0 && (
-        <ul className="mt-4 list-disc space-y-1 pl-5 text-sm">{scopes.map((s) => <li key={s}>{label(s)}</li>)}</ul>
+      <p className="mt-4 text-sm">
+        Signed in as <span className="font-medium">{email}</span>
+      </p>
+      {details?.redirect_uri && (
+        <p className="mt-1 break-all text-xs text-muted-foreground">
+          Returns to {details.redirect_uri}
+        </p>
       )}
-      <p className="mt-4 text-xs text-muted-foreground">This does not bypass this app's permissions — it only sees your own data.</p>
-      {error && <p role="alert" className="mt-4 text-sm text-destructive">{error}</p>}
+      {scopes.length > 0 && (
+        <ul className="mt-4 list-disc space-y-1 pl-5 text-sm">
+          {scopes.map((s) => (
+            <li key={s}>{label(s)}</li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-4 text-xs text-muted-foreground">
+        This does not bypass this app's permissions — it only sees your own data.
+      </p>
+      {error && (
+        <p role="alert" className="mt-4 text-sm text-destructive">
+          {error}
+        </p>
+      )}
       <div className="mt-6 flex gap-3">
-        <Button className="flex-1" disabled={busy} onClick={() => decide(true)}>Approve</Button>
-        <Button variant="outline" className="flex-1" disabled={busy} onClick={() => decide(false)}>Cancel connection</Button>
+        <Button className="flex-1" disabled={busy} onClick={() => decide(true)}>
+          Approve
+        </Button>
+        <Button variant="outline" className="flex-1" disabled={busy} onClick={() => decide(false)}>
+          Cancel connection
+        </Button>
       </div>
     </Shell>
   );

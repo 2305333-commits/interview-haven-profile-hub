@@ -32,11 +32,16 @@ function ResetPassword() {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data, error }) => { if (mounted) setReady(!error && !!data.session); });
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (mounted) setReady(!error && !!data.session);
+    });
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setReady(true);
     });
-    return () => { mounted = false; data.subscription.unsubscribe(); };
+    return () => {
+      mounted = false;
+      data.subscription.unsubscribe();
+    };
   }, []);
 
   async function submit(e: React.FormEvent) {

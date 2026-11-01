@@ -2,9 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { generateStructured, generateEvaluation, transcribeAudio } from "./ai.server";
-import { runCode, sameValue } from "./runner.server";
+import { runCode, sameValue, judgeStatus } from "./runner.server";
 import { levelFromManual, stepLevel } from "./levels";
-import { deliveryPrompt, summarizeDelivery, voiceRecordingSchema, type VoiceDelivery } from "./voice-delivery";
+import {
+  deliveryPrompt,
+  summarizeDelivery,
+  voiceRecordingSchema,
+  type VoiceDelivery,
+} from "./voice-delivery";
 import { questionRules, resumeFacts, spokenEvaluationRules } from "./interview-rules";
 import { combineVideoFeedback, videoEvidenceSchema, type VideoFeedback } from "./video-interview";
 import { assessVideo } from "./video-assessment.server";
@@ -67,7 +72,10 @@ const evalSchema = z.object({
   weaknesses: z.array(z.string()),
   needsFollowUp: z.boolean(),
 });
-export type Evaluation = z.infer<typeof evalSchema> & { voiceDelivery?: VoiceDelivery; videoFeedback?: VideoFeedback };
+export type Evaluation = z.infer<typeof evalSchema> & {
+  voiceDelivery?: VoiceDelivery;
+  videoFeedback?: VideoFeedback;
+};
 
 const INTERVIEWER =
   "You are a sharp but friendly technical interviewer for students and job seekers. Ask one clear question at a time, conversational in tone, no preamble, no numbering.";
@@ -136,11 +144,12 @@ export const startInterview = createServerFn({ method: "POST" })
         .order("created_at", { ascending: false })
         .limit(40);
       const bankText = resumeFacts(bank ?? []);
-      ctx = `Target role: ${p?.target_role ?? "-"}; College: ${p?.college ?? "-"}; Skills: ${(p?.skills ?? []).join(", ")}. ${ctx ?? ""}${
-        bankText
-          ? `\nResume items as background facts only; write fresh questions grounded in these items:\n${bankText}`
-          : ""
-      }`.slice(0, 8000);
+      ctx =
+        `Target role: ${p?.target_role ?? "-"}; College: ${p?.college ?? "-"}; Skills: ${(p?.skills ?? []).join(", ")}. ${ctx ?? ""}${
+          bankText
+            ? `\nResume items as background facts only; write fresh questions grounded in these items:\n${bankText}`
+            : ""
+        }`.slice(0, 8000);
     }
     let level: string = levelFromManual(data.difficulty);
     if (data.adaptive) {
@@ -150,9 +159,10 @@ export const startInterview = createServerFn({ method: "POST" })
         .eq("topic", data.topic)
         .maybeSingle();
       if (r)
-        level = ["Easy", "Medium", "Medium+", "Hard", "Hard+", "Expert"][
-          Math.min(5, Math.floor(Number(r.rating) / 1.8))
-        ] ?? "Medium";
+        level =
+          ["Easy", "Medium", "Medium+", "Hard", "Hard+", "Expert"][
+            Math.min(5, Math.floor(Number(r.rating) / 1.8))
+          ] ?? "Medium";
     }
     const { data: interview, error } = await supabase
       .from("interviews")
@@ -220,32 +230,61 @@ export const submitAnswer = createServerFn({ method: "POST" })
     if (interview.completed_at) throw new Error("This interview has ended.");
     if (turn.score !== null && turn.evaluation) {
       const saved = turn.rating_result as { rating?: number; previousRating?: number } | null;
-      return { evaluation: turn.evaluation as unknown as Evaluation, rating: saved?.rating ?? 5, previousRating: saved?.previousRating ?? 5, next: null, answer: turn.answer ?? "" };
+      return {
+        evaluation: turn.evaluation as unknown as Evaluation,
+        rating: saved?.rating ?? 5,
+        previousRating: saved?.previousRating ?? 5,
+        next: null,
+        answer: turn.answer ?? "",
+      };
     }
     const voice = interview.mode === "voice" || interview.mode === "video";
-    if (interview.mode === "video" && !data.video) throw new Error("Record an answer and consent to AI processing first.");
+    if (interview.mode === "video" && !data.video)
+      throw new Error("Record an answer and consent to AI processing first.");
     const key = process.env["LOVABLE_API_KEY"];
     const delivery = voice ? summarizeDelivery(data.recordings ?? []) : null;
 
     const [ev, videoAssessment] = await evaluateTogether(
-      () => generateEvaluation(key ?? "",
-      evalSchema,
-      "You are a rigorous but encouraging interview evaluator. Scores are 0-10 numbers. Be specific and concise.",
-      `${categoryPrompt(interview.category, interview.topic, interview.context)}
+      () =>
+        generateEvaluation(
+          key ?? "",
+          evalSchema,
+          "You are a rigorous but encouraging interview evaluator. Scores are 0-10 numbers. Be specific and concise.",
+          `${categoryPrompt(interview.category, interview.topic, interview.context)}
 Difficulty: ${turn.difficulty}
 Question: ${turn.question}
 Candidate answer${voice ? " (spoken, transcribed — also judge spoken communication)" : ""}: """${data.answer}"""
 ${voice ? deliveryPrompt(delivery) : ""}
 ${voice ? spokenEvaluationRules : ""}
 Evaluate technical correctness, completeness, communication clarity, confidence, depth and accuracy. Give an overall score, feedback (2 concise sentences), an improved version of their answer (up to 80 words), an ideal answer (up to 80 words), missing concepts, strengths and weaknesses (up to 3 short topic tags each like "Deadlocks" or "SQL Joins"), and whether a follow-up question would be valuable. Preserve the specific technical explanation; avoid repeated advice.`,
-      ),
-      () => interview.mode === "video" && data.video ? assessVideo(key ?? "", data.video) : Promise.resolve(null),
+        ),
+      () =>
+        interview.mode === "video" && data.video
+          ? assessVideo(key ?? "", data.video)
+          : Promise.resolve(null),
     );
     const score = Math.min(10, Math.max(0, ev.score));
-    const evaluation: Evaluation = { ...ev, score, ...(delivery ? { voiceDelivery: delivery } : {}), ...(videoAssessment && data.video ? { videoFeedback: combineVideoFeedback(videoAssessment, score, data.video.setting) } : {}) };
-    const { data: saved, error: saveError } = await supabase.rpc("save_interview_answer", { p_turn: turn.id, p_answer: data.answer, p_evaluation: JSON.parse(JSON.stringify(evaluation)) });
+    const evaluation: Evaluation = {
+      ...ev,
+      score,
+      ...(delivery ? { voiceDelivery: delivery } : {}),
+      ...(videoAssessment && data.video
+        ? { videoFeedback: combineVideoFeedback(videoAssessment, score, data.video.setting) }
+        : {}),
+    };
+    const { data: saved, error: saveError } = await supabase.rpc("save_interview_answer", {
+      p_turn: turn.id,
+      p_answer: data.answer,
+      p_evaluation: JSON.parse(JSON.stringify(evaluation)),
+    });
     if (saveError) throw new Error(saveError.message);
-    return saved as unknown as { evaluation: Evaluation; rating: number; previousRating: number; next: null; answer: string };
+    return saved as unknown as {
+      evaluation: Evaluation;
+      rating: number;
+      previousRating: number;
+      next: null;
+      answer: string;
+    };
   });
 
 export const nextInterviewQuestion = createServerFn({ method: "POST" })
@@ -253,45 +292,65 @@ export const nextInterviewQuestion = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ turnId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { data: turn } = await supabase.from("interview_turns").select("*").eq("id", data.turnId).single();
+    const { data: turn } = await supabase
+      .from("interview_turns")
+      .select("*")
+      .eq("id", data.turnId)
+      .single();
     if (!turn || turn.score === null) throw new Error("Submit this answer before continuing.");
-    const { data: interview } = await supabase.from("interviews").select("*").eq("id", turn.interview_id).single();
+    const { data: interview } = await supabase
+      .from("interviews")
+      .select("*")
+      .eq("id", turn.interview_id)
+      .single();
     if (!interview || interview.completed_at) throw new Error("This interview has ended.");
-    const { data: allTurns } = await supabase.from("interview_turns").select("id, question, difficulty, answer").eq("interview_id", interview.id).order("created_at");
+    const { data: allTurns } = await supabase
+      .from("interview_turns")
+      .select("id, question, difficulty, answer")
+      .eq("interview_id", interview.id)
+      .order("created_at");
     const existing = (allTurns ?? []).find((t) => !t.answer);
-    if (existing) return { id: existing.id, question: existing.question, difficulty: existing.difficulty };
+    if (existing)
+      return { id: existing.id, question: existing.question, difficulty: existing.difficulty };
     const score = Number(turn.score);
     const ev = turn.evaluation as unknown as Evaluation;
     const voice = interview.mode === "voice" || interview.mode === "video";
-      const level = interview.adaptive ? stepLevel(turn.difficulty, score) : turn.difficulty;
-      const { data: prev } = await supabase
-        .from("interview_turns")
-        .select("question, answer, score")
-        .eq("interview_id", interview.id)
-        .order("created_at");
-      const question = await askQuestion({
-        category: interview.category,
-        topic: interview.topic,
-        context: interview.context,
-        level,
-        history: (prev ?? []).map((p) => ({
-          question: p.question,
-          answer: p.answer,
-          score: p.score === null ? null : Number(p.score),
-        })),
-        followUp: interview.follow_ups && ev.needsFollowUp,
-        voice,
-      });
-      const { data: nt, error: nextError } = await supabase.rpc("append_interview_question", { p_id: interview.id, p_question: question, p_difficulty: level });
-      if (nextError || !nt) throw new Error(nextError?.message ?? "Could not prepare the next question. Please retry.");
-      return nt as unknown as { id: string; question: string; difficulty: string };
+    const level = interview.adaptive ? stepLevel(turn.difficulty, score) : turn.difficulty;
+    const { data: prev } = await supabase
+      .from("interview_turns")
+      .select("question, answer, score")
+      .eq("interview_id", interview.id)
+      .order("created_at");
+    const question = await askQuestion({
+      category: interview.category,
+      topic: interview.topic,
+      context: interview.context,
+      level,
+      history: (prev ?? []).map((p) => ({
+        question: p.question,
+        answer: p.answer,
+        score: p.score === null ? null : Number(p.score),
+      })),
+      followUp: interview.follow_ups && ev.needsFollowUp,
+      voice,
+    });
+    const { data: nt, error: nextError } = await supabase.rpc("append_interview_question", {
+      p_id: interview.id,
+      p_question: question,
+      p_difficulty: level,
+    });
+    if (nextError || !nt)
+      throw new Error(nextError?.message ?? "Could not prepare the next question. Please retry.");
+    return nt as unknown as { id: string; question: string; difficulty: string };
   });
 
 export const finishInterview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ interviewId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: result, error } = await context.supabase.rpc("complete_interview", { p_id: data.interviewId });
+    const { data: result, error } = await context.supabase.rpc("complete_interview", {
+      p_id: data.interviewId,
+    });
     if (error) throw new Error(error.message);
     return result as unknown as { avg: number | null; answered: number; xpGained: number };
   });
@@ -309,9 +368,27 @@ const problemSchema = z.object({
     java: z.string(),
     cpp: z.string(),
   }),
-  hiddenTests: z.array(z.object({ input: z.string(), expected: z.string().refine((v) => { try { JSON.parse(v); return true; } catch { return false; } }, "Expected output must be JSON") })).min(1).max(20),
+  hiddenTests: z
+    .array(
+      z.object({
+        input: z.string(),
+        expected: z.string().refine((v) => {
+          try {
+            JSON.parse(v);
+            return true;
+          } catch {
+            return false;
+          }
+        }, "Expected output must be JSON"),
+      }),
+    )
+    .min(1)
+    .max(20),
 });
-export type CodingProblem = Omit<z.infer<typeof problemSchema>, "hiddenTests"> & { id: string; testCount: number };
+export type CodingProblem = Omit<z.infer<typeof problemSchema>, "hiddenTests"> & {
+  id: string;
+  testCount: number;
+};
 
 export const generateCodingProblem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -327,11 +404,18 @@ export const generateCodingProblem = createServerFn({ method: "POST" })
       `Create one ${data.difficulty} coding interview problem on ${data.topic}. Include 2 examples, 3-5 constraints, a function signature (no body, no boilerplate) for python, javascript, java and cpp using the same function name, and 6 hidden tests including edge cases, with inputs as argument literals and expected outputs as canonical JSON (strings double quoted, booleans lowercase).`,
     );
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: saved, error } = await supabaseAdmin.from("coding_problems").insert({ user_id: context.userId, topic: data.topic, problem: JSON.parse(JSON.stringify(problem)) }).select("id").single();
+    const { data: saved, error } = await supabaseAdmin
+      .from("coding_problems")
+      .insert({
+        user_id: context.userId,
+        topic: data.topic,
+        problem: JSON.parse(JSON.stringify(problem)),
+      })
+      .select("id")
+      .single();
     if (error || !saved) throw new Error("Could not save the coding problem. Please retry.");
     const { hiddenTests, ...publicProblem } = problem;
     return { ...publicProblem, id: saved.id, testCount: hiddenTests.length };
-
   });
 
 const reviewSchema = z.object({
@@ -371,7 +455,12 @@ export const judgeCode = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: stored, error: problemError } = await supabaseAdmin.from("coding_problems").select("problem").eq("id", data.problemId).eq("user_id", userId).single();
+    const { data: stored, error: problemError } = await supabaseAdmin
+      .from("coding_problems")
+      .select("problem")
+      .eq("id", data.problemId)
+      .eq("user_id", userId)
+      .single();
     if (problemError || !stored) throw new Error("Problem not found. Generate a new problem.");
     const problem = problemSchema.parse(stored.problem);
     const tests = problem.hiddenTests;
@@ -395,7 +484,8 @@ export const judgeCode = createServerFn({ method: "POST" })
       input: t.input,
       expected: t.expected,
       actual: actuals[i] || (compiles ? run.status : "Compilation error"),
-      passed: !!actuals[i] && !actuals[i]?.startsWith("ERROR") && sameValue(actuals[i] ?? "", t.expected),
+      passed:
+        !!actuals[i] && !actuals[i]?.startsWith("ERROR") && sameValue(actuals[i] ?? "", t.expected),
     }));
     const passedCount = testResults.filter((t) => t.passed).length;
     const errorText = (run.compileOutput || run.stderr).slice(0, 2000);
@@ -409,15 +499,23 @@ export const judgeCode = createServerFn({ method: "POST" })
       ...review,
       tests: testResults,
       compiles,
-      score: Math.round((passedCount / Math.max(1, tests.length)) * 80) / 10 + (passedCount === tests.length ? 2 : 0),
-      status: run.status,
+      score:
+        Math.round((passedCount / Math.max(1, tests.length)) * 80) / 10 +
+        (passedCount === tests.length ? 2 : 0),
+      status: judgeStatus(run.status, passedCount, tests.length),
       error: errorText,
       timeSec: run.timeSec,
       memoryKb: run.memoryKb,
       executed: true,
     };
     const score = Math.min(10, Math.max(0, res.score));
-    const { error: saveError } = await supabaseAdmin.rpc("save_coding_result", { p_user: userId, p_problem: data.problemId, p_language: data.language, p_code: data.code, p_result: JSON.parse(JSON.stringify({ ...res, score })) });
+    const { error: saveError } = await supabaseAdmin.rpc("save_coding_result", {
+      p_user: userId,
+      p_problem: data.problemId,
+      p_language: data.language,
+      p_code: data.code,
+      p_result: JSON.parse(JSON.stringify({ ...res, score })),
+    });
     if (saveError) throw new Error("Could not save coding feedback. Please retry.");
     return { ...res, score };
   });
@@ -434,22 +532,23 @@ export const transcribe = createServerFn({ method: "POST" })
 /* ---------------- Resume question bank ---------------- */
 
 const resumeQSchema = z.object({
-  questions: z.array(
-    z.object({
-      question: z.string(),
-      topic: z.string(),
-      resumeItem: z.string(),
-      kind: z.enum(["technical", "project", "behavioral", "experience"]),
-      difficulty: z.enum(["easy", "medium", "hard"]),
-    }),
-  ).min(1).max(30),
+  questions: z
+    .array(
+      z.object({
+        question: z.string(),
+        topic: z.string(),
+        resumeItem: z.string(),
+        kind: z.enum(["technical", "project", "behavioral", "experience"]),
+        difficulty: z.enum(["easy", "medium", "hard"]),
+      }),
+    )
+    .min(1)
+    .max(30),
 });
 
 export const generateResumeQuestions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ count: z.number().int().min(5).max(30) }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ count: z.number().int().min(5).max(30) }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: p } = await supabase
@@ -478,7 +577,10 @@ export const generateResumeQuestions = createServerFn({ method: "POST" })
       kind: q.kind,
       difficulty: q.difficulty,
     }));
-    const { error: insErr } = await supabase.rpc("replace_resume_questions", { p_path: p.resume_path, p_rows: rows });
+    const { error: insErr } = await supabase.rpc("replace_resume_questions", {
+      p_path: p.resume_path,
+      p_rows: rows,
+    });
     if (insErr) throw new Error(insErr.message);
     return { count: rows.length };
   });

@@ -17,16 +17,37 @@ export const Route = createFileRoute("/_authenticated/concepts")({
       { title: "Concept Practice — InterviewVerse" },
       { name: "description", content: "Learn a concept and practice it with fresh AI exercises." },
       { property: "og:title", content: "Concept Practice — InterviewVerse" },
-      { property: "og:description", content: "Learn a concept and practice it with fresh AI exercises." },
+      {
+        property: "og:description",
+        content: "Learn a concept and practice it with fresh AI exercises.",
+      },
     ],
   }),
   component: Concepts,
 });
 
-const SUGGESTED = ["Deadlocks", "Database indexing", "TCP vs UDP", "Recursion", "Polymorphism", "Hash maps", "Caching", "Big-O"];
+const SUGGESTED = [
+  "Deadlocks",
+  "Database indexing",
+  "TCP vs UDP",
+  "Recursion",
+  "Polymorphism",
+  "Hash maps",
+  "Caching",
+  "Big-O",
+];
 
-type Lesson = { explanation: string; keyPoints: string[]; exercises: { prompt: string; hint: string }[] };
-type Result = { verdict: "correct" | "partial" | "incorrect"; score: number; feedback: string; modelAnswer: string };
+type Lesson = {
+  explanation: string;
+  keyPoints: string[];
+  exercises: { prompt: string; hint: string }[];
+};
+type Result = {
+  verdict: "correct" | "partial" | "incorrect";
+  score: number;
+  feedback: string;
+  modelAnswer: string;
+};
 
 function Concepts() {
   const lessonFn = useServerFn(conceptLesson);
@@ -66,7 +87,9 @@ function Concepts() {
     if (!a || !lesson || busy) return;
     setBusy(`ex${i}`);
     try {
-      const r = await checkFn({ data: { concept: active, exercise: lesson.exercises[i]?.prompt ?? "", answer: a } });
+      const r = await checkFn({
+        data: { concept: active, exercise: lesson.exercises[i]?.prompt ?? "", answer: a },
+      });
       setResults((rs) => ({ ...rs, [i]: r }));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not check");
@@ -85,13 +108,18 @@ function Concepts() {
             placeholder="Any concept, e.g. Virtual memory"
             value={concept}
             onChange={(e) => setConcept(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !busy) void load(); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !busy) void load();
+            }}
           />
           {(["easy", "medium", "hard"] as const).map((d) => (
             <button
               key={d}
               onClick={() => setLevel(d)}
-              className={cn("rounded-md border px-3 text-sm capitalize", level === d && "border-primary bg-primary/10")}
+              className={cn(
+                "rounded-md border px-3 text-sm capitalize",
+                level === d && "border-primary bg-primary/10",
+              )}
             >
               {d}
             </button>
@@ -132,9 +160,14 @@ function Concepts() {
             const r = results[i];
             return (
               <div key={i} className="card-surface space-y-3 p-5">
-                <p className="font-mono text-xs uppercase tracking-widest text-primary">Exercise {i + 1}</p>
+                <p className="font-mono text-xs uppercase tracking-widest text-primary">
+                  Exercise {i + 1}
+                </p>
                 <p className="font-medium">{ex.prompt}</p>
-                <button className="text-sm text-primary" onClick={() => setHints((h) => ({ ...h, [i]: !h[i] }))}>
+                <button
+                  className="text-sm text-primary"
+                  onClick={() => setHints((h) => ({ ...h, [i]: !h[i] }))}
+                >
                   {hints[i] ? "Hide hint" : "Show hint"}
                 </button>
                 {hints[i] && <p className="rounded-lg bg-muted p-3 text-sm">💡 {ex.hint}</p>}
@@ -151,7 +184,11 @@ function Concepts() {
                   <div
                     className={cn(
                       "rounded-lg border-l-4 bg-muted p-4 text-sm",
-                      r.verdict === "correct" ? "border-l-success" : r.verdict === "partial" ? "border-l-accent" : "border-l-destructive",
+                      r.verdict === "correct"
+                        ? "border-l-success"
+                        : r.verdict === "partial"
+                          ? "border-l-accent"
+                          : "border-l-destructive",
                     )}
                   >
                     <p className="font-semibold capitalize">

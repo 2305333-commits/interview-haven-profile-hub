@@ -130,7 +130,10 @@ function RootComponent() {
     let currentUser: string | null | undefined;
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       const userId = session?.user.id ?? null;
-      if (currentUser !== userId) { queryClient.clear(); currentUser = userId; }
+      if (currentUser !== userId) {
+        queryClient.clear();
+        currentUser = userId;
+      }
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();

@@ -100,7 +100,11 @@ function ResumeQuestions() {
           ))}
         </div>
       )}
-      {error && <p role="alert">Could not load resume questions. <Button onClick={() => refetch()}>Retry</Button></p>}
+      {error && (
+        <p role="alert">
+          Could not load resume questions. <Button onClick={() => refetch()}>Retry</Button>
+        </p>
+      )}
       <div className="space-y-3">
         {shown.map((q) => (
           <div key={q.id} className="card-surface p-4">

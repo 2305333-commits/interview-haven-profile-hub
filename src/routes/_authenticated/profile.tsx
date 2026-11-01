@@ -48,7 +48,12 @@ function Profile() {
       });
   }, [p]);
 
-  if (profileError) return <p role="alert">Could not load your profile. <Button onClick={() => refetch()}>Retry</Button></p>;
+  if (profileError)
+    return (
+      <p role="alert">
+        Could not load your profile. <Button onClick={() => refetch()}>Retry</Button>
+      </p>
+    );
   if (!p) return <p className="text-muted-foreground">Loading…</p>;
 
   async function save(e: React.FormEvent) {
@@ -95,8 +100,14 @@ function Profile() {
       toast.error(error.message);
       return;
     }
-    const { error: saveError } = await supabase.from("profiles").update({ resume_path: path }).eq("id", p.id);
-    if (saveError) { toast.error("Resume uploaded but could not be linked. Please retry."); return; }
+    const { error: saveError } = await supabase
+      .from("profiles")
+      .update({ resume_path: path })
+      .eq("id", p.id);
+    if (saveError) {
+      toast.error("Resume uploaded but could not be linked. Please retry.");
+      return;
+    }
     qc.invalidateQueries({ queryKey: ["resume_questions"] });
     toast.success("Resume uploaded");
     qc.invalidateQueries({ queryKey: ["profile"] });
@@ -104,8 +115,13 @@ function Profile() {
 
   async function viewResume() {
     if (!p?.resume_path) return;
-    const { data, error } = await supabase.storage.from("resumes").createSignedUrl(p.resume_path, 60);
-    if (error) { toast.error("Could not open your resume. Please retry."); return; }
+    const { data, error } = await supabase.storage
+      .from("resumes")
+      .createSignedUrl(p.resume_path, 60);
+    if (error) {
+      toast.error("Could not open your resume. Please retry.");
+      return;
+    }
     if (data) window.open(data.signedUrl, "_blank");
   }
 
