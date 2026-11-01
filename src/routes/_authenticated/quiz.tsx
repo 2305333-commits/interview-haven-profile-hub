@@ -38,10 +38,12 @@ const TOPICS = [
   "Mixed Challenge",
 ];
 const COUNTS = [5, 10, 15, 20];
-type Q = { question: string; options: string[]; correctIndex: number; explanation: string };
+type Q = { question: string; options: string[]; correctIndex?: number; explanation?: string };
 
 function Quiz() {
   const gen = useServerFn(generateQuiz);
+  const submit = useServerFn(submitQuiz);
+  const [attemptId, setAttemptId] = useState<string | null>(null);
   const qc = useQueryClient();
   const [topic, setTopic] = useState<string>(TOPICS[0] ?? "Operating Systems");
   const [custom, setCustom] = useState("");
@@ -79,7 +81,9 @@ function Quiz() {
   async function begin() {
     setBusy(true);
     try {
-      const q = await gen({ data: { topic: finalTopic, difficulty, count } });
+      const res = await gen({ data: { topic: finalTopic, difficulty, count } });
+      const q = res.questions;
+      setAttemptId(res.attemptId);
       if (!q.length) throw new Error("No questions were generated. Please try again.");
       setQs(q);
       setI(0);
@@ -96,20 +100,15 @@ function Quiz() {
   async function complete() {
     if (!qs || busy) return;
     setBusy(true);
-    const score = qs.reduce((a, q, k) => a + (answers[k] === q.correctIndex ? 1 : 0), 0);
-    const { error } = await supabase.from("quiz_results").insert({
-      topic: finalTopic,
-      difficulty,
-      score,
-      total_questions: qs.length,
-      time_spent_seconds: secs,
-      question_count: count,
-    });
-    setBusy(false);
-    if (error) {
-      toast.error("Could not save your quiz. Your answers are kept; press Finish to retry.");
+    try {
+      const res = await submit({ data: { attemptId: attemptId ?? "", answers, seconds: secs } });
+      setQs(res.questions);
+    } catch (e) {
+      setBusy(false);
+      toast.error(e instanceof Error ? e.message : "Could not save your quiz. Press Finish to retry.");
       return;
     }
+    setBusy(false);
     setDone(true);
     qc.invalidateQueries({ queryKey: ["quiz_results"] });
   }
@@ -179,7 +178,7 @@ function Quiz() {
             >
               <p className="font-medium">{q.question}</p>
               <p className="mt-1">
-                Correct: {q.options[q.correctIndex]}
+                Correct: {q.options[q.correctIndex ?? -1]}
                 {answers[k] !== q.correctIndex && (
                   <span className="text-muted-foreground">
                     {" "}
