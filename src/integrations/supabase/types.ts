@@ -324,6 +324,36 @@ export type Database = {
           },
         ]
       }
+      quiz_attempts: {
+        Row: {
+          created_at: string
+          difficulty: string
+          id: string
+          questions: Json
+          topic: string
+          used: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          difficulty: string
+          id?: string
+          questions: Json
+          topic: string
+          used?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          difficulty?: string
+          id?: string
+          questions?: Json
+          topic?: string
+          used?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       quiz_results: {
         Row: {
           created_at: string | null
@@ -477,6 +507,15 @@ export type Database = {
         Returns: Json
       }
       complete_interview: { Args: { p_id: string }; Returns: Json }
+      record_interview_answer: {
+        Args: {
+          p_answer: string
+          p_evaluation: Json
+          p_turn: string
+          p_user: string
+        }
+        Returns: Json
+      }
       replace_resume_questions: {
         Args: { p_path: string; p_rows: Json }
         Returns: number
