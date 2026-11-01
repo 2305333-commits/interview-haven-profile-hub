@@ -50,6 +50,6 @@ def test_integrity():
         # Rating table grants deliberately omit DELETE; erase only this test row via privileged cleanup outside this test.
         if gained:
             xp = call('GET', 'profiles?id=eq.' + uid + '&select=xp')[0]['xp']
-            call('PATCH', 'profiles?id=eq.' + uid, {'xp': xp - gained})
+            pass  # xp is server-managed now
         print('Test topic requiring cleanup:', topic)
 if __name__ == '__main__': test_integrity()

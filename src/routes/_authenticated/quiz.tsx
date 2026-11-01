@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { generateQuiz } from "@/lib/ai.functions";
+import { generateQuiz, submitQuiz } from "@/lib/ai.functions";
 import { fmtTime } from "@/lib/data";
 import { PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
