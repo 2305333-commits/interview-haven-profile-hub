@@ -189,6 +189,16 @@ export const startInterview = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    if (data.retryQuestion) {
+      // Only allow retrying a question this user was actually asked before.
+      const { data: prior } = await supabase
+        .from("interview_turns")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("question", data.retryQuestion)
+        .limit(1);
+      if (!prior?.length) throw new Error("That question could not be found in your history.");
+    }
     let ctx = data.context;
     if (data.category === "resume") {
       const { data: p } = await supabase
