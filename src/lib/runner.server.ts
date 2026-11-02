@@ -2,9 +2,19 @@
 const COMPILER = {
   python: "cpython-3.12.7",
   javascript: "nodejs-20.17.0",
+  typescript: "typescript-5.6.2",
   java: "openjdk-jdk-21+35",
+  c: "gcc-13.2.0",
   cpp: "gcc-13.2.0",
+  csharp: "mono-6.12.0.199",
+  go: "go-1.23.2",
+  rust: "rust-1.82.0",
 } as const;
+
+const OPTIONS: Partial<Record<keyof typeof COMPILER, Record<string, string>>> = {
+  c: { options: "c17" },
+  cpp: { options: "c++17", "compiler-option-raw": "-O2" },
+};
 
 export type RunOutput = {
   status: string;
@@ -31,7 +41,7 @@ export async function runCode(language: keyof typeof COMPILER, source: string): 
         language === "java"
           ? source.replace(/^(\s*)public\s+((?:final\s+)?class\s)/gm, "$1$2")
           : source,
-      ...(language === "cpp" ? { options: "c++17", "compiler-option-raw": "-O2" } : {}),
+      ...OPTIONS[language],
     }),
   });
   const text = await res.text();

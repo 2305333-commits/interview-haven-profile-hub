@@ -425,8 +425,13 @@ const problemSchema = z.object({
   signatures: z.object({
     python: z.string(),
     javascript: z.string(),
+    typescript: z.string(),
     java: z.string(),
+    c: z.string(),
     cpp: z.string(),
+    csharp: z.string(),
+    go: z.string(),
+    rust: z.string(),
   }),
   hiddenTests: z
     .array(
@@ -461,7 +466,7 @@ export const generateCodingProblem = createServerFn({ method: "POST" })
     const problem = await generateStructured(
       problemSchema,
       "You write LeetCode-style interview coding problems with precise statements and correct test cases.",
-      `Create one ${data.difficulty} coding interview problem on ${data.topic}. Include 2 examples, 3-5 constraints, a function signature (no body, no boilerplate) for python, javascript, java and cpp using the same function name, and 6 hidden tests including edge cases, with inputs as argument literals and expected outputs as canonical JSON (strings double quoted, booleans lowercase).`,
+      `Create one ${data.difficulty} coding interview problem on ${data.topic}. Include 2 examples, 3-5 constraints, a function signature (no body, no boilerplate) for python, javascript, typescript, java, c, cpp, csharp, go and rust using the same function name, and 6 hidden tests including edge cases, with inputs as argument literals and expected outputs as canonical JSON (strings double quoted, booleans lowercase).`,
     );
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: saved, error } = await supabaseAdmin
@@ -507,7 +512,17 @@ export const judgeCode = createServerFn({ method: "POST" })
     z
       .object({
         problemId: z.string().uuid(),
-        language: z.enum(["python", "javascript", "java", "cpp"]),
+        language: z.enum([
+          "python",
+          "javascript",
+          "typescript",
+          "java",
+          "c",
+          "cpp",
+          "csharp",
+          "go",
+          "rust",
+        ]),
         code: z.string().min(1).max(20000),
       })
       .parse(d),

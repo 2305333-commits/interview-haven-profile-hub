@@ -41,8 +41,13 @@ const TOPICS = [
 const LANGS = [
   ["python", "Python"],
   ["javascript", "JavaScript"],
+  ["typescript", "TypeScript"],
   ["java", "Java"],
+  ["c", "C"],
   ["cpp", "C++"],
+  ["csharp", "C#"],
+  ["go", "Go"],
+  ["rust", "Rust"],
 ] as const;
 type Lang = (typeof LANGS)[number][0];
 
