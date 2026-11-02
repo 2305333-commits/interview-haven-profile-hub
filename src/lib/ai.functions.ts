@@ -183,11 +183,22 @@ export const startInterview = createServerFn({ method: "POST" })
         followUps: z.boolean(),
         mode: z.enum(["text", "voice", "written", "video"]),
         context: z.string().max(8000).nullable(),
+        retryQuestion: z.string().min(5).max(2000).optional(),
       })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    if (data.retryQuestion) {
+      // Only allow retrying a question this user was actually asked before.
+      const { data: prior } = await supabase
+        .from("interview_turns")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("question", data.retryQuestion)
+        .limit(1);
+      if (!prior?.length) throw new Error("That question could not be found in your history.");
+    }
     let ctx = data.context;
     if (data.category === "resume") {
       const { data: p } = await supabase
@@ -236,15 +247,17 @@ export const startInterview = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw new Error(error.message);
-    const question = await askQuestion({
-      category: data.category,
-      topic: data.topic,
-      context: ctx,
-      level,
-      history: [],
-      followUp: false,
-      voice: data.mode === "voice" || data.mode === "video",
-    });
+    const question =
+      data.retryQuestion ??
+      (await askQuestion({
+        category: data.category,
+        topic: data.topic,
+        context: ctx,
+        level,
+        history: [],
+        followUp: false,
+        voice: data.mode === "voice" || data.mode === "video",
+      }));
     const { data: turn, error: tErr } = await supabase
       .from("interview_turns")
       .insert({ user_id: userId, interview_id: interview.id, question, difficulty: level })

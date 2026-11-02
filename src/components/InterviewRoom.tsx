@@ -3,7 +3,8 @@ import { fmtTime } from "@/lib/data";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Mic, Square, Volume2 } from "lucide-react";
+import { Mic, RotateCcw, Square, Volume2 } from "lucide-react";
+import { EvaluatingNotice, takeRetry, type RetryRequest } from "@/components/EvaluatingNotice";
 import {
   finishInterview,
   startInterview,
@@ -92,6 +93,19 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
   }, []);
 
   const current = turns[turns.length - 1];
+  const [lastTopic, setLastTopic] = useState("");
+  const evalRef = useRef<HTMLDivElement>(null);
+  const lastEvaluated = turns.reduce((acc, t, i) => (t.evaluation ? i : acc), -1);
+  useEffect(() => {
+    if (lastEvaluated >= 0)
+      evalRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [lastEvaluated]);
+  // A retry queued from History / saved review starts automatically.
+  useEffect(() => {
+    const r = takeRetry();
+    if (r) void begin(r);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [elapsed, setElapsed] = useState(0);
   const waiting = !!current && !current.answer && !summary;
   useEffect(() => {
@@ -102,8 +116,8 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
   }, [mode, waiting, current?.id]);
   const needsContext = category === "project" || category === "teach";
 
-  async function begin(): Promise<void> {
-    if (needsContext && !context.trim()) {
+  async function begin(retry?: RetryRequest): Promise<void> {
+    if (!retry && needsContext && !context.trim()) {
       toast.error(
         category === "project" ? "Describe your project first" : "Tell us what concept you know",
       );
@@ -111,23 +125,30 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
     }
     setBusy(true);
     try {
-      const t =
-        category === "teach"
+      const t = retry
+        ? retry.topic
+        : category === "teach"
           ? context.slice(0, 100)
           : category === "project"
             ? "Project Deep Dive"
             : topic;
       const res = await start({
         data: {
-          category,
+          category: retry?.category ?? category,
           topic: t,
           difficulty,
           adaptive,
           followUps,
           mode,
-          context: needsContext ? context : null,
+          context: !retry && needsContext ? context : null,
+          ...(retry ? { retryQuestion: retry.question } : {}),
         },
       });
+      if (retry) {
+        setCount(1);
+        toast.success("Retry started — answer the same question again.");
+      }
+      setLastTopic(t);
       setInterviewId(res.interviewId);
       setTurns([res.turn]);
       setSummary(null);
@@ -368,7 +389,7 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
             Follow-ups <Switch checked={followUps} onCheckedChange={setFollowUps} />
           </label>
         </div>
-        <Button size="lg" onClick={begin} disabled={busy}>
+        <Button size="lg" onClick={() => begin()} disabled={busy}>
           {busy ? "Preparing your interviewer…" : "Start interview"}
         </Button>
       </div>
@@ -397,7 +418,20 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
             </p>
           )}
           {t.evaluation && (
-            <EvaluationCard ev={t.evaluation} rating={t.rating} prev={t.prevRating} />
+            <div ref={i === lastEvaluated ? evalRef : undefined} className="scroll-mt-24 space-y-2">
+              <EvaluationCard ev={t.evaluation} rating={t.rating} prev={t.prevRating} />
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy || preparingNext}
+                onClick={() => {
+                  if (summary || confirm("Leave this interview and try this question again?"))
+                    void begin({ question: t.question, topic: lastTopic || topic, category });
+                }}
+              >
+                <RotateCcw className="mr-1 h-4 w-4" /> Try this question again
+              </Button>
+            </div>
           )}
         </div>
       ))}
@@ -482,11 +516,20 @@ export function InterviewRoom({ mode }: { mode: "text" | "voice" | "written" | "
               {busy ? "Evaluating…" : "Submit answer"}
             </Button>
           </div>
+          {busy && (
+            <EvaluatingNotice
+              steps={
+                mode === "video"
+                  ? ["Transcribing your recording…", "Grading your answer and reviewing delivery & outfit…", "Writing your feedback…"]
+                  : mode === "voice"
+                    ? ["Reading your transcript…", "Grading content and delivery…", "Writing your feedback…"]
+                    : ["Reading your answer…", "Comparing with what an interviewer expects…", "Writing your feedback…"]
+              }
+            />
+          )}
         </div>
       ) : preparingNext ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          Preparing your next question…
-        </p>
+        <EvaluatingNotice title="Preparing your next question" steps={["Feedback saved ✓ — scroll up anytime to re-read it.", "Writing a fresh follow-up question…"]} />
       ) : nextFailed && current ? (
         <div className="flex gap-2">
           <Button onClick={() => continueInterview(current.id)}>Retry next question</Button>
