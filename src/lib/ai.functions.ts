@@ -183,6 +183,7 @@ export const startInterview = createServerFn({ method: "POST" })
         followUps: z.boolean(),
         mode: z.enum(["text", "voice", "written", "video"]),
         context: z.string().max(8000).nullable(),
+        retryQuestion: z.string().min(5).max(2000).optional(),
       })
       .parse(d),
   )
@@ -236,15 +237,17 @@ export const startInterview = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw new Error(error.message);
-    const question = await askQuestion({
-      category: data.category,
-      topic: data.topic,
-      context: ctx,
-      level,
-      history: [],
-      followUp: false,
-      voice: data.mode === "voice" || data.mode === "video",
-    });
+    const question =
+      data.retryQuestion ??
+      (await askQuestion({
+        category: data.category,
+        topic: data.topic,
+        context: ctx,
+        level,
+        history: [],
+        followUp: false,
+        voice: data.mode === "voice" || data.mode === "video",
+      }));
     const { data: turn, error: tErr } = await supabase
       .from("interview_turns")
       .insert({ user_id: userId, interview_id: interview.id, question, difficulty: level })
