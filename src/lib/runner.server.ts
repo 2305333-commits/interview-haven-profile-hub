@@ -41,7 +41,7 @@ export async function runCode(language: keyof typeof COMPILER, source: string): 
         language === "java"
           ? source.replace(/^(\s*)public\s+((?:final\s+)?class\s)/gm, "$1$2")
           : source,
-      ...(language === "cpp" ? { options: "c++17", "compiler-option-raw": "-O2" } : {}),
+      ...OPTIONS[language],
     }),
   });
   const text = await res.text();
