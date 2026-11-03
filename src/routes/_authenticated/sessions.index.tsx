@@ -35,6 +35,32 @@ function Sessions() {
     },
   });
   const interviewsResult = useQuery(interviewsQuery);
+  const coding =
+    useQuery({
+      queryKey: ["coding-history"],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from("coding_submissions")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(50);
+        if (error) throw new Error(error.message);
+        return data ?? [];
+      },
+    }).data ?? [];
+  const quizzes =
+    useQuery({
+      queryKey: ["quiz-history"],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from("quiz_results")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(50);
+        if (error) throw new Error(error.message);
+        return data ?? [];
+      },
+    }).data ?? [];
   const sessions = sessionsResult.data ?? [];
   const interviews = interviewsResult.data ?? [];
 
@@ -86,6 +112,46 @@ function Sessions() {
         {interviews.length === 0 && (
           <p className="p-4 text-sm text-muted-foreground">No AI interviews yet.</p>
         )}
+      </div>
+      <h2 className="mb-3 text-xl font-bold">Coding submissions</h2>
+      <div className="card-surface mb-10 divide-y">
+        {coding.map((c) => {
+          const p = c.problem as { title?: string; topic?: string } | null;
+          const r = c.result as { tests?: { passed: boolean }[]; summary?: string } | null;
+          const passed = r?.tests?.filter((t) => t.passed).length ?? 0;
+          return (
+            <details key={c.id} className="p-4 text-sm">
+              <summary className="flex cursor-pointer justify-between gap-2">
+                <span>
+                  {p?.title ?? "Coding problem"}{" "}
+                  <span className="text-muted-foreground">
+                    · {c.language} · {new Date(c.created_at).toLocaleDateString()}
+                    {r?.tests ? ` · ${passed}/${r.tests.length} tests` : ""}
+                  </span>
+                </span>
+                <span className="font-mono">{c.score !== null ? `${Number(c.score).toFixed(1)}/10` : "—"}</span>
+              </summary>
+              {r?.summary && <p className="mt-2 text-muted-foreground">{r.summary}</p>}
+              <pre className="mt-2 max-h-64 overflow-auto rounded-lg bg-ink p-3 font-mono text-xs text-ink-foreground">{c.code}</pre>
+            </details>
+          );
+        })}
+        {coding.length === 0 && <p className="p-4 text-sm text-muted-foreground">No coding submissions yet.</p>}
+      </div>
+      <h2 className="mb-3 text-xl font-bold">Quiz results</h2>
+      <div className="card-surface mb-10 divide-y">
+        {quizzes.map((q) => (
+          <div key={q.id} className="flex justify-between p-4 text-sm">
+            <span>
+              {q.topic}{" "}
+              <span className="text-muted-foreground">
+                · {q.difficulty} · {q.created_at ? new Date(q.created_at).toLocaleDateString() : ""}
+              </span>
+            </span>
+            <span className="font-mono">{q.score}/{q.total_questions}</span>
+          </div>
+        ))}
+        {quizzes.length === 0 && <p className="p-4 text-sm text-muted-foreground">No quizzes yet.</p>}
       </div>
       <h2 className="mb-3 text-xl font-bold">Earlier practice sessions</h2>
       <div className="card-surface divide-y">
