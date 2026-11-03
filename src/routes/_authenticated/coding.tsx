@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { EvaluatingNotice } from "@/components/EvaluatingNotice";
 import { toast } from "sonner";
 import { CheckCircle2, XCircle } from "lucide-react";
 import {
@@ -61,6 +62,7 @@ function Coding() {
   const [code, setCode] = useState("");
   const [result, setResult] = useState<JudgeResult | null>(null);
   const [busy, setBusy] = useState<"gen" | "judge" | null>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
 
   async function newProblem() {
     setBusy("gen");
@@ -81,6 +83,7 @@ function Coding() {
     setBusy("judge");
     try {
       setResult(await judge({ data: { problemId: problem.id, language: lang, code } }));
+      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Judging failed");
     } finally {
@@ -169,8 +172,17 @@ function Coding() {
         </div>
       )}
 
+      {busy === "judge" && (
+        <div className="mt-6">
+          <EvaluatingNotice
+            title="Running and grading your code"
+            steps={["Compiling your code…", "Running hidden tests…", "Reviewing complexity and style…"]}
+          />
+        </div>
+      )}
+
       {result && (
-        <div className="card-surface mt-6 space-y-4 p-5">
+        <div ref={resultRef} className="card-surface mt-6 scroll-mt-24 space-y-4 p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-lg font-bold">
               {passed}/{result.tests.length} tests passed
