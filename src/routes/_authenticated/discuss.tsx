@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { Loader2, RotateCcw } from "lucide-react";
 import { discuss } from "@/lib/ai.functions";
 import { PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -40,31 +41,47 @@ function Discuss() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<Msg[] | null>(null);
   const end = useRef<HTMLDivElement>(null);
 
   useEffect(() => end.current?.scrollIntoView({ behavior: "smooth" }), [msgs, busy]);
+
+  async function run(next: Msg[]) {
+    setBusy(true);
+    setFailed(null);
+    try {
+      const r = await send({ data: { messages: next.slice(-40) } });
+      if (!r?.reply?.trim()) throw new Error("The mentor sent an empty reply.");
+      setMsgs((m) => [...m, { role: "assistant", content: r.reply }]);
+    } catch (e) {
+      const raw = e instanceof Error ? e.message : "";
+      const msg =
+        !raw || raw.includes("<") || raw.length > 200
+          ? "The mentor couldn't reply right now. Your message is kept — tap Retry."
+          : raw;
+      setFailed(next);
+      toast.error(msg);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function submit(content = text) {
     if (!content.trim() || busy) return;
     const next = [...msgs, { role: "user" as const, content: content.trim() }];
     setMsgs(next);
     setText("");
-    setBusy(true);
-    try {
-      const r = await send({ data: { messages: next.slice(-40) } });
-      setMsgs((m) => [...m, { role: "assistant", content: r.reply }]);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "The mentor couldn't reply");
-    } finally {
-      setBusy(false);
-    }
+    await run(next);
   }
 
   return (
     <>
       <PageHeader eyebrow="Your study buddy" title="AI Discussion">
         {msgs.length > 0 && (
-          <Button variant="ghost" size="sm" disabled={busy} onClick={() => setMsgs([])}>
+          <Button variant="ghost" size="sm" disabled={busy} onClick={() => {
+              setMsgs([]);
+              setFailed(null);
+            }}>
             New chat
           </Button>
         )}
@@ -99,7 +116,20 @@ function Discuss() {
               {m.content}
             </p>
           ))}
-          {busy && <p className="text-sm text-muted-foreground">Mentor is thinking…</p>}
+          {busy && (
+            <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Mentor is thinking… this can take a few
+              seconds.
+            </p>
+          )}
+          {failed && !busy && (
+            <div className="flex items-center gap-3 rounded-xl border border-destructive/40 p-3 text-sm">
+              <span>The reply didn't come through. Your message is saved.</span>
+              <Button size="sm" variant="outline" onClick={() => run(failed)}>
+                <RotateCcw className="mr-1 h-4 w-4" /> Retry
+              </Button>
+            </div>
+          )}
           <div ref={end} />
         </div>
         <div className="mt-4 flex gap-2">
