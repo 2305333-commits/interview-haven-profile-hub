@@ -41,26 +41,6 @@ export const interviewsQuery = queryOptions({
   },
 });
 
-export const categoriesQuery = queryOptions({
-  queryKey: ["categories"],
-  queryFn: async () => {
-    const { data, error } = await supabase.from("categories").select("*").order("sort_order");
-    if (error) throw new Error(error.message);
-    return data ?? [];
-  },
-});
-
-export const questionsQuery = queryOptions({
-  queryKey: ["questions"],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from("questions")
-      .select("*, category:categories(*)")
-      .order("created_at");
-    if (error) throw new Error(error.message);
-    return data ?? [];
-  },
-});
 
 export function profileCompletion(
   p: {
