@@ -22,6 +22,13 @@
       "when": 1793552658309,
       "tag": "0002_server_derived_scores",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793698892693,
+      "tag": "0003_lock_scores_and_retired_bank",
+      "breakpoints": true
     }
   ]
 }
