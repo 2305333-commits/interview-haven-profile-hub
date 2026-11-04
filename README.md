@@ -1,8 +1,6 @@
 # Interview Haven Profile Hub
 
 
-This project was built with [Lovable](https://lovable.dev).
-
 **Live app**: https://interview-haven-profile-hub.lovable.app
 
 ## Build with Lovable
