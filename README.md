@@ -1,6 +1,5 @@
 # Interview Haven Profile Hub
 
-i'm giving you a prompt make minimal changes in current project itself...keep whatever extra feature it has...it got completely diverted because of project reset and whatever...so here's the prompt for you...analyze this incomplete Next.js project.Understand the architecture and intended functionality.Identify missing features, bugs, runtime errors, incomplete code, placeholder implementations, and missing integrations.Complete the project while preserving the existing architecture.Generate exact file modifications and newly created files.Do not rewrite working code unnecessarily.
 
 This project was built with [Lovable](https://lovable.dev).
 
