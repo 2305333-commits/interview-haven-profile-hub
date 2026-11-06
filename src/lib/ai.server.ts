@@ -2,12 +2,25 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { NoObjectGeneratedError, Output, streamText } from "ai";
 import type { z } from "zod";
 import { createLovableAiGatewayProvider } from "./ai-gateway/gateway-helpers.server";
+import { geminiStructured, geminiTranscribe, withGeminiFallback } from "./gemini-fallback.server";
 
 const GATEWAY = "https://ai.gateway.lovable.dev";
 export const CHAT_MODEL = "openai/gpt-6-astra";
 export const EVALUATION_MODEL = "google/gemini-3.8-flash";
 
 export async function generateEvaluation<T>(
+  key: string,
+  schema: z.ZodType<T>,
+  instructions: string,
+  prompt: string,
+): Promise<T> {
+  return withGeminiFallback(
+    () => lovableEvaluation(key, schema, instructions, prompt),
+    () => geminiStructured(schema, instructions, prompt),
+  );
+}
+
+async function lovableEvaluation<T>(
   key: string,
   schema: z.ZodType<T>,
   instructions: string,
@@ -52,7 +65,9 @@ function provider() {
       const res = await fetch(input, { ...init, headers });
       runId ??= res.headers.get("X-Lovable-AIG-Run-ID") ?? undefined;
       if (res.status === 402)
-        throw new Error("AI credits are exhausted. Please add credits to continue.");
+        throw Object.assign(new Error("AI credits are exhausted. Please add credits to continue."), {
+          statusCode: 402,
+        });
       if (res.status === 429)
         throw new Error("Too many AI requests right now. Please wait a moment and try again.");
       return res;
@@ -62,6 +77,18 @@ function provider() {
 
 /** Streams a structured-output call server-side and returns the parsed object. */
 export async function generateStructured<T>(
+  schema: z.ZodType<T>,
+  instructions: string,
+  prompt: string,
+  pdf?: { filename: string; base64: string },
+): Promise<T> {
+  return withGeminiFallback(
+    () => lovableStructured(schema, instructions, prompt, pdf),
+    () => geminiStructured(schema, instructions, prompt, pdf),
+  );
+}
+
+async function lovableStructured<T>(
   schema: z.ZodType<T>,
   instructions: string,
   prompt: string,
@@ -104,6 +131,13 @@ export async function generateStructured<T>(
 }
 
 export async function transcribeAudio(base64: string, mime: string): Promise<string> {
+  return withGeminiFallback(
+    () => lovableTranscribe(base64, mime),
+    () => geminiTranscribe(base64, mime),
+  );
+}
+
+async function lovableTranscribe(base64: string, mime: string): Promise<string> {
   const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
   if (!bytes.length || bytes.length > 20 * 1024 * 1024)
     throw new Error("Recording is empty or too large.");
@@ -124,7 +158,7 @@ export async function transcribeAudio(base64: string, mime: string): Promise<str
   const text = await res.text();
   if (!res.ok) {
     console.error("Transcription failed", res.status, text);
-    throw new Error(`Transcription failed (${res.status}).`);
+    throw Object.assign(new Error(`Transcription failed (${res.status}).`), { statusCode: res.status });
   }
   try {
     return (JSON.parse(text).text as string) ?? "";

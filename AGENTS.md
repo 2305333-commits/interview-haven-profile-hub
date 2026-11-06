@@ -28,3 +28,4 @@
 - Rating math remains defined in levels.ts; transactional SQL mirrors the same Elo formula so increments cannot be lost under concurrent submissions. Keep their regression checks aligned.
 - Scores, XP, topic ratings and quiz results are written only server-side (service-role RPCs or column-limited grants) so users cannot award themselves value.
 - Question retries pass retryQuestion to startInterview, which only accepts questions already in the caller's own interview_turns so users cannot grade made-up prompts; EvaluatingNotice is the shared in-progress panel.
+- AI calls go through `withGeminiFallback` (src/lib/gemini-fallback.server.ts): Lovable AI Gateway first, the user's GEMINI_API_KEY only after a credit 402/403 — keeps free backup without changing normal routing.
