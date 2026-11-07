@@ -44,7 +44,11 @@ function Discuss() {
   const [failed, setFailed] = useState<Msg[] | null>(null);
   const end = useRef<HTMLDivElement>(null);
 
-  useEffect(() => end.current?.scrollIntoView({ behavior: "smooth" }), [msgs, busy]);
+  // Braces matter: newer Chrome/Edge return a Promise from scrollIntoView, and
+  // React would call a returned value as cleanup ("l is not a function").
+  useEffect(() => {
+    end.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs, busy]);
 
   async function run(next: Msg[]) {
     setBusy(true);
