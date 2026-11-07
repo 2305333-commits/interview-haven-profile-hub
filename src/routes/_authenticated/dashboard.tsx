@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
+import { SkillRadar } from "@/components/SkillRadar";
 import {
   aggregateTags,
   interviewsQuery,
@@ -116,6 +117,10 @@ function Dashboard() {
             Answer a few interview questions and your topic levels will show up here.
           </p>
         ) : (
+          <>
+          <div className="mb-4">
+            <SkillRadar ratings={ratings} />
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {ratings.map((r) => {
               const h = (r.history as { r: number }[]) ?? [];
@@ -141,6 +146,7 @@ function Dashboard() {
               );
             })}
           </div>
+          </>
         )}
       </section>
 
