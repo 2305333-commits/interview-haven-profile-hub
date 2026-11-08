@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## InterviewVerse architecture
+- Dashboard rewards derive from server-saved topic rating history and submitted quizzes via practice-rewards.ts; normalize coding topic prefixes and use local calendar days so opening a practice page never earns rewards.
 - Interview evaluation uses the latency-focused evaluator in ai.server.ts; question generation keeps its existing model, and video evidence assessment runs concurrently with answer grading.
 - submitAnswer saves and returns feedback before nextInterviewQuestion runs; the client displays saved feedback during the separate adaptive follow-up request and allows retry without regrading.
 - Spoken interview constraints live in interview-rules.ts and apply to generation and evaluation; resume context uses facts only to avoid replaying saved prompts.

@@ -1,4 +1,7 @@
 # Voice delivery checks
+# Dashboard badges and daily streaks
+- [x] Add topic badges and calendar-day streaks from saved graded interview/coding attempts and submitted quizzes.
+- [x] Test reward rules and verify signed-in dashboard on desktop and mobile; completed a real DBMS quiz, confirmed new badge and today's streak, and verified persistence after reload.
 # Pre-publication audit
 - [x] Fix account-cache isolation, concurrent score saving, coding test integrity, and recording lifecycle issues; concurrent regression checks passed.
 - [x] Verify signed-in text/written interviews, quiz saving, concept grading, discussion, profile saving, history, voice/video recording and evaluation using synthetic speech/camera input, and agent access rejection/error states.

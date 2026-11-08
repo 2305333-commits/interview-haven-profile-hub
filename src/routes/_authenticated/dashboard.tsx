@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, ChevronDown, Flame, MessagesSquare, Trophy, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, MessagesSquare, Trophy, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { NAV, PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
 import { SkillRadar } from "@/components/SkillRadar";
+import { PracticeRewards } from "@/components/PracticeRewards";
 import {
   aggregateTags,
   interviewsQuery,
@@ -59,10 +60,6 @@ function Dashboard() {
   const completion = profileCompletion(profile ?? null);
   const done = interviews.filter((i) => i.completed_at);
   const xp = profile?.xp ?? 0;
-  const days = new Set(interviews.map((i) => i.created_at.slice(0, 10)));
-  let streak = 0;
-  for (let d = new Date(); days.has(d.toISOString().slice(0, 10)); d.setDate(d.getDate() - 1))
-    streak++;
 
   return (
     <>
@@ -103,12 +100,13 @@ function Dashboard() {
         </Link>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <Stat icon={MessagesSquare} label="Interviews" value={done.length} />
         <Stat icon={Zap} label="XP" value={xp} />
         <Stat icon={Trophy} label="Level" value={Math.floor(xp / 250) + 1} />
-        <Stat icon={Flame} label="Day streak" value={streak} />
       </div>
+
+      <PracticeRewards />
 
       <section className="mt-10">
         <h2 className="mb-4 text-xl font-bold">Skill map</h2>
@@ -124,7 +122,7 @@ function Dashboard() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {ratings.map((r) => {
               const h = (r.history as { r: number }[]) ?? [];
-              const prev = h.length > 1 ? h[h.length - 2]!.r : Number(r.rating);
+              const prev = h[h.length - 2]?.r ?? Number(r.rating);
               const up = Number(r.rating) >= prev;
               return (
                 <div key={r.id} className="card-surface p-5">
