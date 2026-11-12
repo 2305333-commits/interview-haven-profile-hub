@@ -29,6 +29,13 @@
       "when": 1793698892693,
       "tag": "0003_lock_scores_and_retired_bank",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794504649112,
+      "tag": "0004_fix_next_interview_question_permission",
+      "breakpoints": true
     }
   ]
 }
