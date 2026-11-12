@@ -30,16 +30,22 @@ async function lovableEvaluation<T>(
     baseURL: GATEWAY,
     structuredOutputs: true,
   });
+  let streamError: unknown;
   const result = streamText({
     model: gateway(EVALUATION_MODEL),
     system: instructions,
     prompt,
     output: Output.object({ schema }),
     maxRetries: 0,
+    onError: ({ error }) => {
+      streamError = error;
+    },
   });
   try {
     return (await result.output) as T;
   } catch (error) {
+    // Surface the real gateway error (e.g. 403) so the Gemini fallback can see it.
+    if (streamError) throw streamError;
     if (NoObjectGeneratedError.isInstance(error))
       throw new Error("The evaluation returned an unexpected result. Your answer has been kept.");
     throw error;
@@ -70,6 +76,8 @@ function provider() {
         });
       if (res.status === 429)
         throw new Error("Too many AI requests right now. Please wait a moment and try again.");
+      if (res.status === 403)
+        console.error("AI Gateway refused request", await res.clone().text().catch(() => ""));
       return res;
     },
   });
@@ -105,8 +113,12 @@ async function lovableStructured<T>(
         },
       ]
     : prompt;
+  let streamError: unknown;
   const result = streamText({
     model: provider().responses(CHAT_MODEL),
+    onError: ({ error }) => {
+      streamError = error;
+    },
     instructions,
     messages: [{ role: "user", content }],
     output: Output.object({ schema }),
@@ -123,6 +135,8 @@ async function lovableStructured<T>(
   try {
     return (await result.output) as T;
   } catch (e) {
+    // Surface the real gateway error (e.g. 403) so the Gemini fallback can see it.
+    if (streamError) throw streamError;
     if (NoObjectGeneratedError.isInstance(e)) {
       throw new Error("The AI returned an unexpected response. Please try again.");
     }

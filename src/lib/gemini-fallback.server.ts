@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * Backup AI provider: used only when the Lovable AI Gateway reports that
- * workspace credits are exhausted (402) or blocked by a credit limit (403).
+ * workspace credits are exhausted (402) or AI spending is refused (403).
  */
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 // Primary free-tier model, then a lighter one when Google is overloaded.
@@ -22,9 +22,10 @@ export function lovableCreditsPaused() {
 export function isCreditError(e: unknown): boolean {
   const err = e as { statusCode?: number; status?: number; message?: string; cause?: unknown };
   const status = err?.statusCode ?? err?.status;
-  if (status === 402) return true;
+  // The gateway answers 402 when credits run out and 403 when the workspace or
+  // published app is blocked from spending them; both mean "use the backup".
+  if (status === 402 || status === 403) return true;
   const msg = String(err?.message ?? "").toLowerCase();
-  if (status === 403 && /credit|limit/.test(msg)) return true;
   if (/credits? (are )?exhausted|insufficient (ai )?credits|credit_limit|payment required/.test(msg))
     return true;
   return err?.cause ? isCreditError(err.cause) : false;
