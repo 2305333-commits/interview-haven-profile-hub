@@ -22,3 +22,6 @@
 - [x] Add a separate Video Interview with consent-based camera/microphone recording and combined feedback.
 - [x] Test question rules and verify recording, playback, retry, evaluation, mobile layouts, and saved feedback with spoken audio and a camera test pattern; verified unavailable visual evidence is not scored.
 - [x] KIIT 7th-semester project report (DOCX) with logo, front pages, placeholders for names/rolls/guide
+
+# Brand icon
+- [ ] Replace favicon with a classier symbol-only icon (no IV letters, no chat bubble/check look); user picks from concepts.
