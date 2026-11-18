@@ -24,4 +24,4 @@
 - [x] KIIT 7th-semester project report (DOCX) with logo, front pages, placeholders for names/rolls/guide
 
 # Brand icon
-- [ ] Replace favicon with a classier symbol-only icon (no IV letters, no chat bubble/check look); user picks from concepts.
+- [x] Replace favicon with a classier symbol-only icon (gold guiding star with small teal star on navy), chosen by the user.
